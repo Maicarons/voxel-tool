@@ -1,7 +1,7 @@
 {
   "name": "@voxel-tool/react",
   "version": "0.1.0",
-  "description": "MagicaVoxel .vox 体素模型的 React 3D 查看器组件 (基于 @voxel-tool/core + Three.js)",
+  "description": "MagicaVoxel .vox 体素模型的 React 3D 查看器组件 (基于 @voxel-tool/viewer + Three.js)",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@voxel-tool/core": "^0.1.0",
-    "three": "^0.160.0"
+    "@voxel-tool/viewer": "^0.1.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

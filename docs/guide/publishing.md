@@ -45,10 +45,15 @@ npm run build
 npm pack --dry-run -w @voxel-tool/core
 # 应只看到 dist/ 与 package.json、README、LICENSE，不应出现 src/ 或 node_modules/
 
-# 4) 顺序发布（react/vue 依赖 core，先发 core）
-npm publish -w @voxel-tool/core --access public
-npm publish -w @voxel-tool/react --access public
-npm publish -w @voxel-tool/vue  --access public
+# 4) 顺序发布（组件依赖 core / viewer，先发 core，再 viewer，最后各框架组件）
+npm publish -w @voxel-tool/core    --access public
+npm publish -w @voxel-tool/viewer  --access public
+npm publish -w @voxel-tool/react   --access public
+npm publish -w @voxel-tool/vue     --access public
+npm publish -w @voxel-tool/solid   --access public
+npm publish -w @voxel-tool/preact  --access public
+npm publish -w @voxel-tool/svelte  --access public
+npm publish -w @voxel-tool/qwik    --access public
 ```
 
 > 一键脚本：根目录 `package.json` 的 `build` 后依次 publish 三个 workspace 即可。
@@ -105,11 +110,16 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm publish -w @voxel-tool/core --provenance --access public
+      - run: npm publish -w @voxel-tool/viewer --provenance --access public
       - run: npm publish -w @voxel-tool/react --provenance --access public
-      - run: npm publish -w @voxel-tool/vue  --provenance --access public
+      - run: npm publish -w @voxel-tool/vue --provenance --access public
+      - run: npm publish -w @voxel-tool/solid --provenance --access public
+      - run: npm publish -w @voxel-tool/preact --provenance --access public
+      - run: npm publish -w @voxel-tool/svelte --provenance --access public
+      - run: npm publish -w @voxel-tool/qwik --provenance --access public
 ```
 
-触发方式：在 GitHub 创建 **Release**（打 tag + 发布），CI 自动发布三个包。
+触发方式：在 GitHub 创建 **Release**（打 tag + 发布），CI 自动发布全部八个包。
 `--provenance` 会生成供应链溯源证明（需 OIDC，与可信发布天然契合）。
 
 ## 6. 备选：粒度访问令牌（GAT）
@@ -121,13 +131,13 @@ npm token create --granular --package "@voxel-tool/core" --permissions publish -
 ```
 
 - 必须在创建时勾选 **Bypass 2FA**，且 **90 天内过期**。
-- 存入仓库 Secret `NPM_TOKEN`，并在 `publish.yml` 中 `env: NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`。
+- 存入仓库 Secret `NPM_TOKEN`，并在 `publish.yml` 中通过 `env.NODE_AUTH_TOKEN` 引用该 Secret。
 - 经典长期令牌已被吊销，**不要**再用旧教程的 `NPM_TOKEN` 长期方案。
 
 ## 7. 版本与发版顺序
 
-- 三个包版本建议保持同步（monorepo 惯例）。
-- 发布顺序：先 `core`，再 `react` / `vue`（组件依赖 core，避免消费者装到不兼容版本）。
+- 八个包版本建议保持同步（monorepo 惯例）。
+- 发布顺序：先 `core`，再 `viewer`（框架组件都依赖它），最后 `react` / `vue` / `solid` / `preact` / `svelte` / `qwik`，避免消费者装到不兼容版本。
 - 升级版本：`npm version patch/minor/major -w <pkg>`，提交并打 tag，再发 Release。
 
 ## 8. 常见问题
@@ -137,4 +147,4 @@ npm token create --granular --package "@voxel-tool/core" --permissions publish -
 - **`npm publish` 卡在 2FA**：本地发布需在 `npm login` 后的 2 小时会话内完成 2FA 挑战。
 - **CI 报无权限发布**：检查 npm 侧是否登记了 Trusted Publisher，且 `permissions.id-token: write` 已加。
 
-速查见仓库根 [PUBLISHING.md](../PUBLISHING.md)。
+速查见仓库根 [PUBLISHING.md](https://github.com/Maicarons/voxel-tool/blob/main/PUBLISHING.md)。

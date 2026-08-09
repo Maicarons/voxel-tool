@@ -11,9 +11,14 @@
 npm login                                   # 2 小时会话, 发布时需 2FA
 npm install && npm run build
 npm pack --dry-run -w @voxel-tool/core      # 确认只打进 dist/
-npm publish -w @voxel-tool/core --access public
-npm publish -w @voxel-tool/react --access public
-npm publish -w @voxel-tool/vue  --access public
+npm publish -w @voxel-tool/core    --access public
+npm publish -w @voxel-tool/viewer  --access public
+npm publish -w @voxel-tool/react   --access public
+npm publish -w @voxel-tool/vue     --access public
+npm publish -w @voxel-tool/solid   --access public
+npm publish -w @voxel-tool/preact  --access public
+npm publish -w @voxel-tool/svelte  --access public
+npm publish -w @voxel-tool/qwik    --access public
 ```
 
 ## CI 自动发布（推荐，tokenless）
@@ -23,4 +28,6 @@ npm publish -w @voxel-tool/vue  --access public
 
 - 各包 `package.json` 已设 `publishConfig.access = "public"`。
 - 各包 `files` 仅含 `dist`，确保只发布构建产物。
-- 发版顺序：先 `core`，再 `react` / `vue`。
+- 发版顺序：先 `core`，再 `viewer`（框架组件都依赖它），最后 `react` / `vue` / `solid` / `preact` / `svelte` / `qwik`。
+
+> Qwik 组件依赖 `@builder.io/qwik` 优化器：消费端项目需在自身 Vite 配置启用 `@builder.io/qwik/vite`，否则导出的 QRL 无法被正确解析。

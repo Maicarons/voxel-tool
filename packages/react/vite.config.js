@@ -13,7 +13,7 @@ export default defineConfig({
       fileName: () => 'index.js',
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'react/jsx-runtime', 'three', '@voxel-tool/core'],
+      external: ['react', 'react-dom', 'react/jsx-runtime', 'three', '@voxel-tool/core', '@voxel-tool/viewer'],
     },
   },
 });

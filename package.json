@@ -2,7 +2,7 @@
   "name": "voxel-tool",
   "version": "0.1.0",
   "private": true,
-  "description": "MagicaVoxel .vox 读写与体素模型 3D 查看器 (核心库 + React/Vue 组件)",
+  "description": "MagicaVoxel .vox 读写与体素模型 3D 查看器 (核心库 + 框架无关查看器 + React/Vue/Solid/Preact/Svelte/Qwik 组件)",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -13,6 +13,10 @@
     "test": "npm run test --workspaces --if-present",
     "dev:react": "npm run dev -w @voxel-tool/react",
     "dev:vue": "npm run dev -w @voxel-tool/vue",
+    "dev:solid": "npm run dev -w @voxel-tool/solid",
+    "dev:preact": "npm run dev -w @voxel-tool/preact",
+    "dev:svelte": "npm run dev -w @voxel-tool/svelte",
+    "dev:qwik": "npm run dev -w @voxel-tool/qwik",
     "docs:dev": "npm run dev -w voxel-tool-docs",
     "docs:build": "npm run build -w voxel-tool-docs",
     "clean": "rimraf \"packages/*/dist\" \"packages/*/node_modules\" node_modules docs/.vitepress/dist"
@@ -33,6 +37,11 @@
     "three",
     "react",
     "vue",
+    "solid",
+    "solidjs",
+    "preact",
+    "svelte",
+    "qwik",
     "renderer"
   ],
   "devDependencies": {

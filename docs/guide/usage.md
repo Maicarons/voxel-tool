@@ -103,4 +103,91 @@ async function onFile(e) {
 </template>
 ```
 
+### SolidJS
+
+```tsx
+import { VoxViewer } from '@voxel-tool/solid';
+import { parseVox } from '@voxel-tool/core';
+
+export function App() {
+  const [data, setData] = createSignal(null);
+  const onFile = async (e: any) => {
+    const buf = new Uint8Array(await e.currentTarget.files[0].arrayBuffer());
+    setData(parseVox(buf));
+  };
+  return (
+    <div>
+      <input type="file" accept=".vox" onChange={onFile} />
+      {data() && <VoxViewer model={data().models[0]} palette={data().palette} />}
+    </div>
+  );
+}
+```
+
+### Preact
+
+```jsx
+import { VoxViewer } from '@voxel-tool/preact';
+import { parseVox } from '@voxel-tool/core';
+
+export function App() {
+  const [data, setData] = useState(null);
+  const onFile = async (e) => {
+    const buf = new Uint8Array(await e.target.files[0].arrayBuffer());
+    setData(parseVox(buf));
+  };
+  return (
+    <div>
+      <input type="file" accept=".vox" onChange={onFile} />
+      {data && <VoxViewer model={data.models[0]} palette={data.palette} />}
+    </div>
+  );
+}
+```
+
+### Svelte 5（runes）
+
+```svelte
+<script>
+  import { VoxViewer } from '@voxel-tool/svelte';
+  import { parseVox } from '@voxel-tool/core';
+
+  let data = $state(null);
+  async function onFile(e) {
+    const buf = new Uint8Array(await e.currentTarget.files[0].arrayBuffer());
+    data = parseVox(buf);
+  }
+</script>
+
+<input type="file" accept=".vox" onchange={onFile} />
+{#if data}
+  <VoxViewer model={data.models[0]} palette={data.palette} size={[480, 480]} />
+{/if}
+```
+
+### Qwik
+
+```tsx
+import { component$, useSignal, $ } from '@builder.io/qwik';
+import { VoxViewer } from '@voxel-tool/qwik';
+import { parseVox } from '@voxel-tool/core';
+
+export const App = component$(() => {
+  const data = useSignal(null);
+  const onFile = $(async (e: any) => {
+    const buf = new Uint8Array(await e.target.files[0].arrayBuffer());
+    data.value = parseVox(buf);
+  });
+  return (
+    <div>
+      <input type="file" accept=".vox" onchange$={onFile} />
+      {data.value && <VoxViewer model={data.value.models[0]} palette={data.value.palette} />}
+    </div>
+  );
+});
+```
+
+> Qwik 组件在浏览器可见时才挂载查看器（基于 `useVisibleTask$`），天然契合 Qwik 的「可恢复性」。
+> 别忘了在宿主项目的 Vite 配置启用 `@builder.io/qwik/vite` 优化器。
+
 更多属性见 [组件示例](/components/react-viewer)。

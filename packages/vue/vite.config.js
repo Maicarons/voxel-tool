@@ -13,7 +13,7 @@ export default defineConfig({
       fileName: () => 'index.js',
     },
     rollupOptions: {
-      external: ['vue', '@voxel-tool/core', 'three'],
+      external: ['vue', '@voxel-tool/core', 'three', '@voxel-tool/viewer'],
     },
   },
 });

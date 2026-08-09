@@ -1,8 +1,8 @@
 // React 包的纯逻辑验证 (无需浏览器):
 // 验证 buildVoxelGeometry 的「面剔除」是否正确 —— 这是正经 voxel viewer 的性能核心。
-// 注意: 通过相对路径直接引用 @voxel-tool/core 源码, 避免依赖其 dist 产物是否已构建。
+// 通过相对路径直接引用 @voxel-tool/viewer 与 @voxel-tool/core 源码, 避免依赖其 dist 产物。
 import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette } from '../core/src/index.js';
-import { buildVoxelGeometry } from './src/mesh.js';
+import { buildVoxelGeometry } from '../viewer/src/mesh.js';
 
 const pal = rainbowPalette();
 let ok = true;

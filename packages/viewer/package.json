@@ -1,0 +1,35 @@
+{
+  "name": "@voxel-tool/viewer",
+  "version": "0.1.0",
+  "description": "框架无关的 Three.js 体素查看器核心 (buildVoxelGeometry + createVoxelViewer), 供 React/Vue/Solid/Preact/Svelte/Qwik 组件库复用",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "vite build",
+    "test": "node test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@voxel-tool/core": "^0.1.0",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11"
+  },
+  "keywords": ["vox", "magicavoxel", "voxel", "three", "viewer", "voxel-tool"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maicarons/voxel-tool.git",
+    "directory": "packages/viewer"
+  },
+  "homepage": "https://github.com/Maicarons/voxel-tool#readme",
+  "bugs": { "url": "https://github.com/Maicarons/voxel-tool/issues" },
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" }
+}

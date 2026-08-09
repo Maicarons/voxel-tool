@@ -1,0 +1,43 @@
+{
+  "name": "@voxel-tool/solid",
+  "version": "0.1.0",
+  "description": "MagicaVoxel .vox 体素模型的 SolidJS 3D 查看器组件 (基于 @voxel-tool/viewer + Three.js)",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "dev": "vite --config example/vite.config.ts",
+    "build": "vite build",
+    "preview": "vite preview --config example/vite.config.ts",
+    "test": "node test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "peerDependencies": {
+    "solid-js": "^1.8.0"
+  },
+  "dependencies": {
+    "@voxel-tool/core": "^0.1.0",
+    "@voxel-tool/viewer": "^0.1.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.11",
+    "vite-plugin-solid": "^2.11.0",
+    "solid-js": "^1.9.3",
+    "typescript": "^5.6.3"
+  },
+  "keywords": ["vox", "magicavoxel", "voxel", "solid", "solidjs", "three", "renderer", "voxel-tool"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maicarons/voxel-tool.git",
+    "directory": "packages/solid"
+  },
+  "homepage": "https://github.com/Maicarons/voxel-tool#readme",
+  "bugs": { "url": "https://github.com/Maicarons/voxel-tool/issues" },
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" }
+}
