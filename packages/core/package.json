@@ -1,0 +1,29 @@
+{
+  "name": "@voxel-tool/core",
+  "version": "0.1.0",
+  "description": "MagicaVoxel .vox 读写、调色板与 VoxelGrid 的纯 JS 核心库 (Node + 浏览器通用)",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --format=esm --platform=browser --outfile=dist/index.js --legal-comments=none",
+    "test": "node test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": ["vox", "magicavoxel", "voxel", "format", "voxel-tool"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maicarons/voxel-tool.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/Maicarons/voxel-tool#readme",
+  "bugs": { "url": "https://github.com/Maicarons/voxel-tool/issues" },
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=18" },
+  "devDependencies": { "esbuild": "^0.24.2" }
+}

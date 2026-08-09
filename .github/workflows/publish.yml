@@ -1,0 +1,44 @@
+name: Publish to npm
+
+# 现代做法: 通过 GitHub OIDC 的 npm Trusted Publishing 发布, 无需在仓库存储任何令牌。
+# 前置: 在 npmjs.com 每个包的 Settings -> Publishing access 添加 Trusted Publisher
+#       (GitHub 仓库 Maicarons/voxel-tool, 工作流 publish.yml)。
+on:
+  release:
+    types: [published]
+
+# id-token: write 供 npm Trusted Publishing (OIDC) 使用; 不要设置 NODE_AUTH_TOKEN。
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build all packages
+        run: npm run build
+
+      # 顺序: 先发 core, 再发依赖它的 react/vue
+      # --provenance 生成供应链溯源证明 (需 OIDC, 与可信发布天然契合)
+      - name: Publish @voxel-tool/core
+        run: npm publish -w @voxel-tool/core --provenance --access public
+
+      - name: Publish @voxel-tool/react
+        run: npm publish -w @voxel-tool/react --provenance --access public
+
+      - name: Publish @voxel-tool/vue
+        run: npm publish -w @voxel-tool/vue --provenance --access public

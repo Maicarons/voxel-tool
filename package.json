@@ -1,0 +1,41 @@
+{
+  "name": "voxel-tool",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MagicaVoxel .vox 读写与体素模型 3D 查看器 (核心库 + React/Vue 组件)",
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "docs"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:react": "npm run dev -w @voxel-tool/react",
+    "dev:vue": "npm run dev -w @voxel-tool/vue",
+    "docs:dev": "npm run dev -w voxel-tool-docs",
+    "docs:build": "npm run build -w voxel-tool-docs",
+    "clean": "rimraf \"packages/*/dist\" \"packages/*/node_modules\" node_modules docs/.vitepress/dist"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maicarons/voxel-tool.git"
+  },
+  "homepage": "https://github.com/Maicarons/voxel-tool#readme",
+  "bugs": {
+    "url": "https://github.com/Maicarons/voxel-tool/issues"
+  },
+  "keywords": [
+    "vox",
+    "magicavoxel",
+    "voxel",
+    "three",
+    "react",
+    "vue",
+    "renderer"
+  ],
+  "devDependencies": {
+    "rimraf": "^6.0.1"
+  }
+}
