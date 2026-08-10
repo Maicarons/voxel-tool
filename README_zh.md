@@ -34,6 +34,8 @@ voxel-tool/
 │   ├── svelte/      @voxel-tool/svelte  Svelte 5 3D 查看器组件
 │   └── qwik/        @voxel-tool/qwik     Qwik 3D 查看器组件
 ├── docs/           VitePress 文档站点
+├── apps/
+│   └── vox-editor/ 完整的 React 体素编辑器项目 (可运行, 非库)
 ├── .github/
 │   └── workflows/   CI + 发布自动化
 ├── LICENSE
@@ -150,6 +152,16 @@ export const App = component$(() => {
   return <VoxViewer model={models[0]} palette={palette} />;
 });
 ```
+
+## 体素编辑器 (完整项目)
+
+一个可直接运行的 **`.vox` 体素编辑器**，基于 React + Three.js 构建在 `@voxel-tool/core` 之上——它是独立项目，不是可复用库。
+
+```bash
+npm run dev:editor     # -> http://localhost:5180
+```
+
+功能：在实时 3D 视图上点击绘制 / 点击擦除（射线拾取立方体面）、256 色调色板、旋转/平移/缩放、撤销、载入与保存 `.vox`、导出 PNG。详见 **[apps/vox-editor](apps/vox-editor)**。
 
 ## 文档
 

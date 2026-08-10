@@ -34,6 +34,8 @@ voxel-tool/
 │   ├── svelte/      @voxel-tool/svelte  Svelte 5 3D viewer component
 │   └── qwik/        @voxel-tool/qwik     Qwik 3D viewer component
 ├── docs/           VitePress documentation site
+├── apps/
+│   └── vox-editor/ complete React voxel editor app (runnable, not a library)
 ├── .github/
 │   └── workflows/   CI + publish automation
 ├── LICENSE
@@ -150,6 +152,16 @@ export const App = component$(() => {
   return <VoxViewer model={models[0]} palette={palette} />;
 });
 ```
+
+## Voxel Editor (complete app)
+
+A full, runnable **`.vox` voxel editor** built with React + Three.js on top of `@voxel-tool/core` — a standalone project, not a reusable library.
+
+```bash
+npm run dev:editor     # -> http://localhost:5180
+```
+
+Features: click-to-paint / click-to-erase on a live 3D view (raycasting against cube faces), a 256-color palette, orbit/pan/zoom, undo, load & save `.vox`, and export to PNG. See **[apps/vox-editor](apps/vox-editor)**.
 
 ## Documentation
 
