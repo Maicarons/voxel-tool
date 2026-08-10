@@ -1,6 +1,7 @@
 # voxel-tool
 
 [![CI](https://github.com/Maicarons/voxel-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/Maicarons/voxel-tool/actions/workflows/ci.yml)
+[![Docs](https://github.com/Maicarons/voxel-tool/actions/workflows/pages.yml/badge.svg)](https://maicarons.github.io/voxel-tool/)
 [![npm](https://img.shields.io/badge/npm-%40voxel--tool%2Fcore-blue)](https://www.npmjs.com/org/voxel-tool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -152,7 +153,9 @@ export const App = component$(() => {
 
 ## 文档
 
-完整文档（安装、使用、API、组件示例、npm 发布方案）见 **[docs/](docs/)**（VitePress）。
+完整文档（安装、使用、API、组件示例、npm 发布方案）在线阅读：**https://maicarons.github.io/voxel-tool/**
+
+源码在 **[docs/](docs/)**（VitePress）。
 
 本地启动文档站点：
 

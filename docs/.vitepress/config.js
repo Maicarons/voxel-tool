@@ -4,6 +4,8 @@ export default defineConfig({
   title: 'voxel-tool',
   description: 'MagicaVoxel .vox 读写与体素模型 3D 查看器（核心库 + 框架无关查看器 + React / Vue / Solid / Preact / Svelte / Qwik 组件）',
   lang: 'zh-CN',
+  // GitHub Pages 项目站点子路径：https://maicarons.github.io/voxel-tool/
+  base: '/voxel-tool/',
   themeConfig: {
     nav: [
       { text: '指南', link: '/guide/installation' },
