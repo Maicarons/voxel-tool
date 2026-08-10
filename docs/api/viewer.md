@@ -1,6 +1,6 @@
 # @voxel-tool/viewer
 
-框架无关的 Three.js 体素查看器核心。所有框架组件（React / Vue / Solid / Preact / Svelte / Qwik）都复用这里的同一套渲染实现，**你也可以完全脱离 UI 框架，直接在任意 DOM 容器里挂载查看器**。
+A framework-agnostic Three.js voxel viewer core. Every framework component (React / Vue / Solid / Preact / Svelte / Qwik) reuses this same rendering implementation — **you can also mount the viewer directly in any DOM container, with no UI framework at all**.
 
 ```js
 import { createVoxelViewer, buildVoxelGeometry } from '@voxel-tool/viewer';
@@ -8,31 +8,31 @@ import { createVoxelViewer, buildVoxelGeometry } from '@voxel-tool/viewer';
 
 ## `createVoxelViewer(container, options)`
 
-在一个容器元素内挂载真实 3D 体素查看器，返回控制器。
+Mounts a real-3D voxel viewer inside a container element and returns a controller.
 
-| 参数 | 类型 | 默认值 | 说明 |
+| Param | Type | Default | Description |
 |---|---|---|---|
-| `container` | `HTMLElement` | — | 目标 DOM 元素（必须有宽高） |
-| `options.src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` 二进制；传入后内部调用 `parseVox` 解析 |
-| `options.model` | `{ size, voxels }` | `null` | 已解析模型（来自 `parseVox` 的 `models[0]`） |
-| `options.palette` | `Array<[r,g,b,a]>` | `null` | 256 项调色板；与 `model` 配套 |
-| `options.background` | `string` | `'#16181e'` | 画布背景色 |
-| `options.width` | `number` | `480` | 初始宽度（px） |
-| `options.height` | `number` | `480` | 初始高度（px） |
-| `options.onInfo` | `(info: [number, number] \| null) => void` | `null` | 重建后回调，参数为 `[体素数, 面数]` |
+| `container` | `HTMLElement` | — | The target DOM element (must have a width and height) |
+| `options.src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` binary; when provided, `parseVox` is called internally |
+| `options.model` | `{ size, voxels }` | `null` | A parsed model (from `parseVox`'s `models[0]`) |
+| `options.palette` | `Array<[r,g,b,a]>` | `null` | A 256-entry palette; pairs with `model` |
+| `options.background` | `string` | `'#16181e'` | Canvas background color |
+| `options.width` | `number` | `480` | Initial width (px) |
+| `options.height` | `number` | `480` | Initial height (px) |
+| `options.onInfo` | `(info: [number, number] \| null) => void` | `null` | Called after rebuild; argument is `[voxelCount, faceCount]` |
 
-> `src` 与 `model` 二选一；两者都给时优先用 `model`。
-> 必须在浏览器环境调用（依赖 `window` / WebGL），SSR 下会抛错。
+> Provide either `src` or `model`; if both are given, `model` wins.
+> Must be called in a browser environment (depends on `window` / WebGL); throws under SSR.
 
-**返回值（控制器）：**
+**Return value (controller):**
 
-| 方法 | 说明 |
+| Method | Description |
 |---|---|
-| `update(input?)` | 数据变化后重建网格：`update({ src?, model?, palette? })` |
-| `setBackground(color)` | 修改画布背景色 |
-| `dispose()` | 卸载：取消动画帧、断开 ResizeObserver、释放 GPU 资源 |
+| `update(input?)` | Rebuild the mesh after data changes: `update({ src?, model?, palette? })` |
+| `setBackground(color)` | Change the canvas background color |
+| `dispose()` | Tear down: cancel animation frames, disconnect the ResizeObserver, release GPU resources |
 
-### 最小示例（无框架）
+### Minimal example (no framework)
 
 ```js
 import { createVoxelViewer } from '@voxel-tool/viewer';
@@ -48,22 +48,22 @@ const viewer = createVoxelViewer(el, {
   onInfo: ([voxels, faces]) => console.log(voxels, faces),
 });
 
-// 切换模型 / 卸载
+// Switch model / dispose
 // viewer.update({ model: other, palette });
 // viewer.dispose();
 ```
 
 ## `buildVoxelGeometry(voxels, palette)`
 
-纯函数：把体素数组编译成 Three.js `BufferGeometry`（含顶点色与面剔除后的索引）。
+A pure function: compiles a voxel array into a Three.js `BufferGeometry` (with vertex colors and face-culled indices).
 
-| 参数 | 类型 | 说明 |
+| Param | Type | Description |
 |---|---|---|
-| `voxels` | `Array<{ x, y, z, i }>` | 体素列表 |
-| `palette` | `Array<[r,g,b,a]>` | 256 项调色板 |
+| `voxels` | `Array<{ x, y, z, i }>` | The voxel list |
+| `palette` | `Array<[r,g,b,a]>` | A 256-entry palette |
 
-- 面剔除：只生成暴露在空气中的面（邻接 6 方向检查），把 6×N 个面砍到外壳。
-- 返回几何体可用 `geo.index.count / 6` 得到面数、`/ 3` 得到三角形数。
+- Face culling: only faces exposed to air are generated (6-neighbor check), trimming 6×N faces down to the shell.
+- The resulting geometry's face count is `geo.index.count / 6`, and the triangle count is `/ 3`.
 
 ```js
 import * as THREE from 'three';
@@ -73,10 +73,10 @@ const geo = buildVoxelGeometry(model.voxels, palette);
 const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
 ```
 
-## 渲染原理
+## Rendering principle
 
-- 每个体素是真实 3D 立方体，靠 WebGL **深度缓冲**正确遮挡（凹形、相邻遮挡不再有排序瑕疵）。
-- **面剔除**：只生成暴露在空气中的面，14582 体素实测仅 6098 面。
-- **正交等距相机** `OrthographicCamera` 摆 `(+,+,+)` 角 → MagicaVoxel 经典观感。
-- `HemisphereLight` + 主/补 `DirectionalLight` 按面法线着色。
-- `OrbitControls` 自由旋转 / 缩放 / 平移。
+- Every voxel is a real 3D cube, correctly occluded by the WebGL **depth buffer** (no sorting artifacts for concave shapes or adjacency).
+- **Face culling**: only faces exposed to air are generated — a 14582-voxel model measured only 6098 faces.
+- **Orthographic isometric camera** `OrthographicCamera` at the `(+,+,+)` angle → the classic MagicaVoxel look.
+- `HemisphereLight` + key/fill `DirectionalLight` shade by face normal.
+- `OrbitControls` for free rotate / zoom / pan.

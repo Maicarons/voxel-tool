@@ -1,6 +1,6 @@
 # @voxel-tool/core
 
-纯 JS 核心库：`.vox` 文件读写、调色板工具、`VoxelGrid` 体素容器。Node 与浏览器通用，**零运行时依赖**。
+A pure-JS core library: `.vox` read/write, palette helpers, and the `VoxelGrid` voxel container. Runs in Node and the browser — **zero runtime dependencies**.
 
 ```js
 import {
@@ -11,20 +11,20 @@ import {
 
 ## `VoxelGrid`
 
-体素容器。内部用 `Map`（key `"x,y,z"` → 颜色索引）存储。
+A voxel container. Internally stores voxels in a `Map` (key `"x,y,z"` → color index).
 
 ```js
 const grid = new VoxelGrid(sx, sy, sz);
 ```
 
-| 成员 | 说明 |
+| Member | Description |
 |---|---|
-| `new VoxelGrid(sx, sy, sz)` | 创建尺寸为 `sx × sy × sz` 的网格（越界抛 `RangeError`） |
-| `grid.set(x, y, z, ci)` | 设置体素颜色索引 `ci`（0..255）；越界或 `ci` 越界抛错 |
-| `grid.addSphere(cx, cy, cz, r, ciFn)` | 在球内填充；`ciFn(dx, dy, dz, dist)` 返回颜色索引 |
-| `grid.length` | 体素数量（getter） |
-| `grid.list()` | 返回有序数组 `[{ x, y, z, i }]` |
-| `grid.voxels` | 底层 `Map`（只读访问） |
+| `new VoxelGrid(sx, sy, sz)` | Create a grid of size `sx × sy × sz` (throws `RangeError` if out of range) |
+| `grid.set(x, y, z, ci)` | Set the color index `ci` (0..255) of a voxel; throws on out-of-range `x/y/z` or `ci` |
+| `grid.addSphere(cx, cy, cz, r, ciFn)` | Fill inside a sphere; `ciFn(dx, dy, dz, dist)` returns the color index |
+| `grid.length` | Number of voxels (getter) |
+| `grid.list()` | Returns an ordered array `[{ x, y, z, i }]` |
+| `grid.voxels` | The underlying `Map` (read-only access) |
 
 ## `toVoxBytes(grid, palette)`
 
@@ -32,7 +32,7 @@ const grid = new VoxelGrid(sx, sy, sz);
 const bytes = toVoxBytes(grid, palette); // -> Uint8Array
 ```
 
-把网格序列化为 `.vox` 二进制（`MAGIC='VOX '` + version 150 + MAIN/SIZE/XYZI/RGBA chunk）。
+Serializes the grid into `.vox` binary (`MAGIC='VOX '` + version 150 + MAIN/SIZE/XYZI/RGBA chunks).
 
 ## `parseVox(input)`
 
@@ -40,34 +40,34 @@ const bytes = toVoxBytes(grid, palette); // -> Uint8Array
 const { version, models, palette } = parseVox(input);
 ```
 
-解析 `.vox` 二进制。
+Parses `.vox` binary.
 
-- `input`：`Uint8Array` / `ArrayBuffer` / Node `Buffer`。
-- 返回：
+- `input`: `Uint8Array` / `ArrayBuffer` / Node `Buffer`.
+- Returns:
   - `version: number`
   - `models: Array<{ size: [sx, sy, sz], voxels: Array<{ x, y, z, i }> }>`
-  - `palette: Array<[r, g, b, a]> | null`（256 项，`a=0` 表示透明；文件无 RGBA chunk 时为 `null`）
+  - `palette: Array<[r, g, b, a]> | null` (256 entries, `a=0` means transparent; `null` when the file has no RGBA chunk)
 
-> 索引映射严格遵循规范：`stream[i]`（i=0..254）→ 调色板索引 `i+1`；`stream[255]` → 索引 `0`。
+> Index mapping strictly follows the spec: `stream[i]` (i=0..254) → palette index `i+1`; `stream[255]` → index `0`.
 
 ## `downloadVox(grid, filename, palette)`
 
-浏览器中触发 `.vox` 文件下载（调用 `toVoxBytes` 后用 Blob 下载）。
+Triggers a `.vox` file download in the browser (calls `toVoxBytes` then downloads via a Blob).
 
-## 调色板工具
+## Palette helpers
 
-| 函数 | 返回 |
+| Function | Returns |
 |---|---|
-| `defaultPalette()` | 256 项 `[r,g,b,a]`，MagicaVoxel 默认调色板 |
-| `rainbowPalette(baseColor?)` | 256 项；`1..254` 彩虹渐变，`255` 为灰基座（默认 `[130,130,140,255]`） |
-| `hsvToRgb(h, s, v)` | `[r,g,b]`（0..255），`h` 为 0..1 |
+| `defaultPalette()` | 256 entries `[r,g,b,a]`, the MagicaVoxel default palette |
+| `rainbowPalette(baseColor?)` | 256 entries; rainbow gradient on `1..254`, `255` is the gray base (default `[130,130,140,255]`) |
+| `hsvToRgb(h, s, v)` | `[r,g,b]` (0..255), `h` is 0..1 |
 
-## 常量
+## Constants
 
-- `MAGIC`：`'VOX '`（4 字节）
-- `VERSION`：`150`
+- `MAGIC`: `'VOX '` (4 bytes)
+- `VERSION`: `150`
 
-## 示例
+## Example
 
 ```js
 import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette } from '@voxel-tool/core';
@@ -79,5 +79,5 @@ grid.addSphere(20, 20, 24, 14, (dx, dy, dz) => 1 + Math.round(((dz + 14) / 28) *
 const palette = rainbowPalette();
 const bytes = toVoxBytes(grid, palette);
 const { models } = parseVox(bytes);
-console.log(models[0].voxels.length); // 往返一致
+console.log(models[0].voxels.length); // round-trip consistent
 ```

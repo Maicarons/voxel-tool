@@ -1,6 +1,6 @@
 # @voxel-tool/react
 
-React 3D 查看器组件（基于 Three.js）。真 3D 立方体 + 深度缓冲 + 面剔除 + 正交等距相机 + OrbitControls。
+React 3D viewer component (Three.js). Real 3D cubes + depth buffer + face culling + orthographic isometric camera + OrbitControls.
 
 ```jsx
 import { VoxViewer } from '@voxel-tool/react';
@@ -8,26 +8,26 @@ import { VoxViewer } from '@voxel-tool/react';
 
 ## `<VoxViewer />` Props
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Prop | Type | Default | Description |
 |---|---|---|---|
-| `src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` 二进制；传入后组件内部调用 `parseVox` 解析 |
-| `model` | `{ size, voxels }` | `null` | 已解析模型（来自 `parseVox` 的 `models[0]`） |
-| `palette` | `Array<[r,g,b,a]>` | `null` | 256 项调色板；与 `model` 配套 |
-| `background` | `string` | `'#16181e'` | 画布背景色 |
-| `width` | `number` | `480` | 画布宽度（px） |
-| `height` | `number` | `480` | 画布高度（px） |
+| `src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` binary; when provided, `parseVox` is called internally |
+| `model` | `{ size, voxels }` | `null` | A parsed model (from `parseVox`'s `models[0]`) |
+| `palette` | `Array<[r,g,b,a]>` | `null` | A 256-entry palette; pairs with `model` |
+| `background` | `string` | `'#16181e'` | Canvas background color |
+| `width` | `number` | `480` | Canvas width (px) |
+| `height` | `number` | `480` | Canvas height (px) |
 
-> `src` 与 `model` 二选一；两者都给时优先用 `model`。
+> Provide either `src` or `model`; if both are given, `model` wins.
 
-## 交互
+## Interaction
 
-- **左键拖拽**：旋转视角
-- **滚轮**：缩放
-- **右键拖拽**：平移
+- **Left-drag**: rotate the view
+- **Scroll**: zoom
+- **Right-drag**: pan
 
-组件自动取景（Box3 包围盒居中 + 缩放进可视范围），左下角显示「体素数 · 面数」。
+The component auto-frames the model (Box3 bounding-box centering + zoom-to-fit) and shows `voxel count · face count` at the bottom-left.
 
-## 示例
+## Example
 
 ```jsx
 import { useEffect, useState } from 'react';
@@ -43,9 +43,9 @@ export default function App() {
       .then((buf) => setData(parseVox(buf)));
   }, []);
 
-  if (!data) return <p>加载中…</p>;
+  if (!data) return <p>Loading…</p>;
   return <VoxViewer model={data.models[0]} palette={data.palette} width={640} height={480} />;
 }
 ```
 
-详见 [组件示例 · React](/components/react-viewer)。
+See [Component Examples · React](/components/react-viewer).

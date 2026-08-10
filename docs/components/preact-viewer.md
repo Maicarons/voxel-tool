@@ -1,7 +1,7 @@
-# 组件示例 · Preact VoxViewer
+# Component Example · Preact VoxViewer
 
-下面是一个完整可运行的 Preact 示例：现场用 `@voxel-tool/core` 造一个「灰底座 + 彩虹球」模型，
-经「写 → 读」闭环后交给 `VoxViewer` 渲染，并支持打开本地 `.vox` 文件。
+A complete, runnable Preact example: it builds a "gray base + rainbow sphere" model on the fly with `@voxel-tool/core`,
+runs it through a write → read round-trip, hands it to `VoxViewer` for rendering, and also supports opening a local `.vox` file.
 
 ```jsx
 // App.jsx
@@ -9,12 +9,12 @@ import { useState } from 'preact/hooks';
 import { VoxViewer } from '@voxel-tool/preact';
 import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette } from '@voxel-tool/core';
 
-// 现场造模型：灰底座 + 彩虹球 -> toVoxBytes -> parseVox
+// Build on the fly: gray base + rainbow sphere -> toVoxBytes -> parseVox
 function buildSample(seed = 0) {
   const SIZE = 40;
   const grid = new VoxelGrid(SIZE, SIZE, SIZE + 10);
   for (let x = 0; x < SIZE; x++)
-    for (let y = 0; y < SIZE; y++) grid.set(x, y, 0, 200); // 索引 200 = 灰
+    for (let y = 0; y < SIZE; y++) grid.set(x, y, 0, 200); // index 200 = gray
 
   const cz = 16 + (seed % 5);
   const r = 18;
@@ -30,13 +30,13 @@ function buildSample(seed = 0) {
 export function App() {
   const [info, setInfo] = useState(() => buildSample(0));
   const [seed, setSeed] = useState(0);
-  const [fileName, setFileName] = useState('内置示例 (灰底座 + 彩虹球)');
+  const [fileName, setFileName] = useState('Built-in sample (gray base + rainbow sphere)');
 
   const regenerate = () => {
     const s = (seed + 1) % 100;
     setSeed(s);
     setInfo(buildSample(s));
-    setFileName(`内置示例 #${s}`);
+    setFileName(`Built-in sample #${s}`);
   };
 
   const onFile = async (e) => {
@@ -47,7 +47,7 @@ export function App() {
       setInfo(parseVox(buf));
       setFileName(f.name);
     } catch (err) {
-      alert('解析失败: ' + err.message);
+      alert('Parse failed: ' + err.message);
     }
   };
 
@@ -55,41 +55,42 @@ export function App() {
 
   return (
     <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'flex-start' }}>
-      <h1 style={{ margin: 0, fontSize: 20 }}>@voxel-tool/preact · 体素模型查看器</h1>
+      <h1 style={{ margin: 0, fontSize: 20 }}>@voxel-tool/preact · Voxel Model Viewer</h1>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button onClick={regenerate}>重新生成</button>
+        <button onClick={regenerate}>Regenerate</button>
         <label>
-          打开 .vox 文件
+          Open .vox file
           <input type="file" accept=".vox" onChange={onFile} style={{ display: 'none' }} />
         </label>
         <span style={{ color: '#8b93a7', fontSize: 13 }}>
-          {fileName} · {model.voxels.length} 体素 · {model.size.join('×')}
+          {fileName} · {model.voxels.length} voxels · {model.size.join('×')}
         </span>
       </div>
 
       <VoxViewer model={model} palette={info.palette} />
 
       <p style={{ color: '#8b93a7', fontSize: 13, maxWidth: 520, lineHeight: 1.6 }}>
-        左键拖拽旋转 · 滚轮缩放 · 右键平移。组件基于 Three.js 真实 3D 渲染（深度缓冲 + 面剔除），
-        与 <code>@voxel-tool/core</code> 解耦：既可传 <code>src</code>（.vox 二进制），也可传已解析的 <code>{ '{ model, palette }' }</code>。
+        Left-drag to rotate · scroll to zoom · right-drag to pan. The component uses real 3D rendering from Three.js
+        (depth buffer + face culling), decoupled from <code>@voxel-tool/core</code>: pass either <code>src</code>
+        (raw .vox bytes) or a parsed <code>{ '{ model, palette }' }</code>.
       </p>
     </div>
   );
 }
 ```
 
-## 本地预览
+## Local preview
 
 ```bash
 npm run dev:preact   # -> http://localhost:5175
 ```
 
-源码见 [`packages/preact/example/`](https://github.com/Maicarons/voxel-tool/tree/main/packages/preact/example)。
+Source: [`packages/preact/example/`](https://github.com/Maicarons/voxel-tool/tree/main/packages/preact/example).
 
-## 渲染原理（为什么比 Canvas2D 更稳）
+## Rendering principle (why it's more robust than Canvas2D)
 
-- 每个体素是真实 3D 立方体，靠 WebGL **深度缓冲**正确遮挡（凹形、相邻遮挡不再有排序瑕疵）。
-- **面剔除**：只生成暴露在空气中的面（邻接 6 方向检查），14582 体素实测仅 6098 面。
-- **正交等距相机** `OrthographicCamera` 摆 `(+,+,+)` 角 → MagicaVoxel 经典观感。
-- `HemisphereLight` + 主/补 `DirectionalLight` 按面法线着色。
-- `OrbitControls` 自由旋转 / 缩放 / 平移。
+- Every voxel is a real 3D cube, correctly occluded by the WebGL **depth buffer** (no sorting artifacts for concave shapes or adjacency).
+- **Face culling**: only faces exposed to air are generated (6-neighbor check) — a 14582-voxel model measured only 6098 faces.
+- **Orthographic isometric camera** `OrthographicCamera` at the `(+,+,+)` angle → the classic MagicaVoxel look.
+- `HemisphereLight` + key/fill `DirectionalLight` shade by face normal.
+- `OrbitControls` for free rotate / zoom / pan.

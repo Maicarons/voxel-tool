@@ -1,52 +1,109 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-  title: 'voxel-tool',
-  description: 'MagicaVoxel .vox 读写与体素模型 3D 查看器（核心库 + 框架无关查看器 + React / Vue / Solid / Preact / Svelte / Qwik 组件）',
-  lang: 'zh-CN',
-  // GitHub Pages 项目站点子路径：https://maicarons.github.io/voxel-tool/
+  // GitHub Pages project-site subpath: https://maicarons.github.io/voxel-tool/
   base: '/voxel-tool/',
+  title: 'voxel-tool',
+  description:
+    'MagicaVoxel .vox read/write and voxel-model 3D viewer — core library + framework-agnostic viewer + React / Vue / Solid / Preact / Svelte / Qwik components',
+  locales: {
+    root: {
+      label: 'English',
+      lang: 'en',
+      themeConfig: {
+        nav: [
+          { text: 'Guide', link: '/guide/installation' },
+          { text: 'API', link: '/api/core' },
+          { text: 'Components', link: '/components/react-viewer' },
+          { text: 'GitHub', link: 'https://github.com/Maicarons/voxel-tool' },
+        ],
+        sidebar: [
+          {
+            text: 'Guide',
+            items: [
+              { text: 'Installation', link: '/guide/installation' },
+              { text: 'Usage', link: '/guide/usage' },
+              { text: 'Publishing to npm', link: '/guide/publishing' },
+            ],
+          },
+          {
+            text: 'API Reference',
+            items: [
+              { text: '@voxel-tool/core', link: '/api/core' },
+              { text: '@voxel-tool/viewer', link: '/api/viewer' },
+              { text: '@voxel-tool/react', link: '/api/react' },
+              { text: '@voxel-tool/vue', link: '/api/vue' },
+              { text: '@voxel-tool/solid', link: '/api/solid' },
+              { text: '@voxel-tool/preact', link: '/api/preact' },
+              { text: '@voxel-tool/svelte', link: '/api/svelte' },
+              { text: '@voxel-tool/qwik', link: '/api/qwik' },
+            ],
+          },
+          {
+            text: 'Component Examples',
+            items: [
+              { text: 'React · VoxViewer', link: '/components/react-viewer' },
+              { text: 'Vue · VoxViewer', link: '/components/vue-viewer' },
+              { text: 'Solid · VoxViewer', link: '/components/solid-viewer' },
+              { text: 'Preact · VoxViewer', link: '/components/preact-viewer' },
+              { text: 'Svelte · VoxViewer', link: '/components/svelte-viewer' },
+              { text: 'Qwik · VoxViewer', link: '/components/qwik-viewer' },
+            ],
+          },
+        ],
+      },
+    },
+    zh: {
+      label: '简体中文',
+      lang: 'zh-CN',
+      title: 'voxel-tool',
+      description:
+        'MagicaVoxel .vox 读写与体素模型 3D 查看器（核心库 + 框架无关查看器 + React / Vue / Solid / Preact / Svelte / Qwik 组件）',
+      themeConfig: {
+        nav: [
+          { text: '指南', link: '/zh/guide/installation' },
+          { text: 'API', link: '/zh/api/core' },
+          { text: '组件', link: '/zh/components/react-viewer' },
+          { text: 'GitHub', link: 'https://github.com/Maicarons/voxel-tool' },
+        ],
+        sidebar: [
+          {
+            text: '指南',
+            items: [
+              { text: '安装', link: '/zh/guide/installation' },
+              { text: '使用', link: '/zh/guide/usage' },
+              { text: '发布到 npm', link: '/zh/guide/publishing' },
+            ],
+          },
+          {
+            text: 'API 参考',
+            items: [
+              { text: '@voxel-tool/core', link: '/zh/api/core' },
+              { text: '@voxel-tool/viewer', link: '/zh/api/viewer' },
+              { text: '@voxel-tool/react', link: '/zh/api/react' },
+              { text: '@voxel-tool/vue', link: '/zh/api/vue' },
+              { text: '@voxel-tool/solid', link: '/zh/api/solid' },
+              { text: '@voxel-tool/preact', link: '/zh/api/preact' },
+              { text: '@voxel-tool/svelte', link: '/zh/api/svelte' },
+              { text: '@voxel-tool/qwik', link: '/zh/api/qwik' },
+            ],
+          },
+          {
+            text: '组件示例',
+            items: [
+              { text: 'React · VoxViewer', link: '/zh/components/react-viewer' },
+              { text: 'Vue · VoxViewer', link: '/zh/components/vue-viewer' },
+              { text: 'Solid · VoxViewer', link: '/zh/components/solid-viewer' },
+              { text: 'Preact · VoxViewer', link: '/zh/components/preact-viewer' },
+              { text: 'Svelte · VoxViewer', link: '/zh/components/svelte-viewer' },
+              { text: 'Qwik · VoxViewer', link: '/zh/components/qwik-viewer' },
+            ],
+          },
+        ],
+      },
+    },
+  },
   themeConfig: {
-    nav: [
-      { text: '指南', link: '/guide/installation' },
-      { text: 'API', link: '/api/core' },
-      { text: '组件', link: '/components/react-viewer' },
-      { text: 'GitHub', link: 'https://github.com/Maicarons/voxel-tool' },
-    ],
-    sidebar: [
-      {
-        text: '指南',
-        items: [
-          { text: '安装', link: '/guide/installation' },
-          { text: '使用', link: '/guide/usage' },
-          { text: '发布到 npm', link: '/guide/publishing' },
-        ],
-      },
-      {
-        text: 'API 参考',
-        items: [
-          { text: '@voxel-tool/core', link: '/api/core' },
-          { text: '@voxel-tool/viewer', link: '/api/viewer' },
-          { text: '@voxel-tool/react', link: '/api/react' },
-          { text: '@voxel-tool/vue', link: '/api/vue' },
-          { text: '@voxel-tool/solid', link: '/api/solid' },
-          { text: '@voxel-tool/preact', link: '/api/preact' },
-          { text: '@voxel-tool/svelte', link: '/api/svelte' },
-          { text: '@voxel-tool/qwik', link: '/api/qwik' },
-        ],
-      },
-      {
-        text: '组件示例',
-        items: [
-          { text: 'React · VoxViewer', link: '/components/react-viewer' },
-          { text: 'Vue · VoxViewer', link: '/components/vue-viewer' },
-          { text: 'Solid · VoxViewer', link: '/components/solid-viewer' },
-          { text: 'Preact · VoxViewer', link: '/components/preact-viewer' },
-          { text: 'Svelte · VoxViewer', link: '/components/svelte-viewer' },
-          { text: 'Qwik · VoxViewer', link: '/components/qwik-viewer' },
-        ],
-      },
-    ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/Maicarons/voxel-tool' },
     ],

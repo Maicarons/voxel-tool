@@ -1,6 +1,6 @@
 # @voxel-tool/vue
 
-Vue 3 3D 查看器组件（基于 Three.js）。与 `@voxel-tool/react` 同一套渲染原理。
+Vue 3 3D viewer component (Three.js). Same rendering approach as `@voxel-tool/react`.
 
 ```js
 import { VoxViewer } from '@voxel-tool/vue';
@@ -8,25 +8,25 @@ import { VoxViewer } from '@voxel-tool/vue';
 
 ## `<VoxViewer />` Props
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Prop | Type | Default | Description |
 |---|---|---|---|
-| `src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` 二进制；传入后组件内部调用 `parseVox` 解析 |
-| `model` | `Object` | `null` | 已解析模型（来自 `parseVox` 的 `models[0]`） |
-| `palette` | `Array` | `null` | 256 项调色板；与 `model` 配套 |
-| `background` | `String` | `'#16181e'` | 画布背景色 |
-| `size` | `Array` | `[480, 480]` | 画布尺寸 `[width, height]`（px） |
+| `src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` binary; when provided, `parseVox` is called internally |
+| `model` | `Object` | `null` | A parsed model (from `parseVox`'s `models[0]`) |
+| `palette` | `Array` | `null` | A 256-entry palette; pairs with `model` |
+| `background` | `String` | `'#16181e'` | Canvas background color |
+| `size` | `Array` | `[480, 480]` | Canvas size `[width, height]` (px) |
 
-> `src` 与 `model` 二选一；两者都给时优先用 `model`。
+> Provide either `src` or `model`; if both are given, `model` wins.
 
-## 交互
+## Interaction
 
-- **左键拖拽**：旋转视角
-- **滚轮**：缩放
-- **右键拖拽**：平移
+- **Left-drag**: rotate the view
+- **Scroll**: zoom
+- **Right-drag**: pan
 
-组件自动取景（Box3 包围盒居中 + 缩放进可视范围），左下角显示「体素数 · 面数」。
+The component auto-frames the model (Box3 bounding-box centering + zoom-to-fit) and shows `voxel count · face count` at the bottom-left.
 
-## 示例
+## Example
 
 ```vue
 <script setup>
@@ -46,4 +46,4 @@ onMounted(async () => {
 </template>
 ```
 
-详见 [组件示例 · Vue](/components/vue-viewer)。
+See [Component Examples · Vue](/components/vue-viewer).

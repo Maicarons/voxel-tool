@@ -1,51 +1,51 @@
-# 发布到 npm
+# Publishing to npm
 
-本页整理将 `voxel-tool` 三个包发布到 npm 的完整方案。规则参考 npm 官方文档与 2025–2026 最新实践
-（**经典长期 `NPM_TOKEN` 已被吊销**，现代做法为 GitHub OIDC「可信发布」）。
+This page lays out the complete workflow for publishing the `voxel-tool` packages to npm. It follows the npm official docs and the latest 2025–2026 practice
+(**the classic long-lived `NPM_TOKEN` has been revoked**; the modern approach is npm Trusted Publishing via GitHub OIDC).
 
-## 1. 前提：npm 账号与 2FA
+## 1. Prerequisites: npm account and 2FA
 
-- 在 [npmjs.com](https://www.npmjs.com/) 注册账号。
-- **启用双因素认证（2FA）**：推荐 WebAuthn / 通行密钥（passkey）。
-  > 自 2023 起所有**新包默认强制 2FA**；2025 起发布任意包（新旧）在会话期间都需 2FA 校验。
-- `npm login` 现在会创建一个 **2 小时有效**的会话令牌（不显示在 UI、自动过期、不可在 CI 复用）。
+- Register an account at [npmjs.com](https://www.npmjs.com/).
+- **Enable two-factor authentication (2FA)**: WebAuthn / passkeys are recommended.
+  > Since 2023, all **new packages require 2FA by default**; since 2025, publishing any package (new or existing) requires a 2FA check during the session.
+- `npm login` now creates a **2-hour session token** (not shown in the UI, auto-expires, cannot be reused in CI).
 
-作用域（scope）包（如 `@voxel-tool/core`）默认是 **private**，免费账号不能发布 private 包，
-因此**首次发布必须** `--access public`。后续版本会继承访问级别。
+Scoped packages (e.g. `@voxel-tool/core`) are **private by default**, and a free account cannot publish private packages,
+so **the first publish must use** `--access public`. Later versions inherit the access level.
 
-## 2. package.json 发布相关配置（本仓库已配好）
+## 2. Publishing-related `package.json` fields (already configured in this repo)
 
-| 字段 | 作用 | 本仓库设置 |
+| Field | Role | This repo |
 |---|---|---|
-| `name` | 包名，含 scope | `@voxel-tool/core` 等 |
-| `version` | 语义化版本 | `0.1.0` |
-| `type: "module"` | ESM 优先 | 是 |
-| `main` / `module` | 入口 | `dist/index.js` |
-| `exports` | 解析入口（ESM） | `".": "./dist/index.js"` |
-| `files` | 仅发布这些目录 | `["dist"]`（不含 src / test） |
-| `publishConfig.access` | 首次公开发布 | `"public"` |
-| `peerDependencies` | 框架由宿主提供 | react / vue |
-| `repository` / `homepage` / `bugs` | 来源关联 | 指向 GitHub |
-| `engines.node` | Node 版本下限 | `>=18` |
+| `name` | Package name, including scope | `@voxel-tool/core`, etc. |
+| `version` | Semantic version | `0.1.0` |
+| `type: "module"` | ESM-first | yes |
+| `main` / `module` | Entry point | `dist/index.js` |
+| `exports` | Resolution entry (ESM) | `".": "./dist/index.js"` |
+| `files` | Publish only these dirs | `["dist"]` (no src / test) |
+| `publishConfig.access` | First public publish | `"public"` |
+| `peerDependencies` | Framework provided by the host | react / vue |
+| `repository` / `homepage` / `bugs` | Source association | point to GitHub |
+| `engines.node` | Minimum Node version | `>=18` |
 
-> 纯 JS 库（core）使用 `esbuild` 打包到 `dist/index.js`；React/Vue 用 Vite `lib` 构建到 `dist/`。
-> 均未附带 `.d.ts`（纯 JS 库常见做法），如需类型可后续补充。
+> The pure-JS core uses `esbuild` to bundle into `dist/index.js`; React/Vue use Vite `lib` mode into `dist/`.
+> None ships `.d.ts` (common for pure-JS libs); add types later if needed.
 
-## 3. 本地首次发布
+## 3. First local publish
 
 ```bash
-# 1) 登录（2 小时会话，发布时会要求 2FA 校验）
+# 1) Log in (2-hour session; 2FA is required at publish time)
 npm login
 
-# 2) 安装并构建全部包
+# 2) Install and build all packages
 npm install
 npm run build
 
-# 3) 发布前先 dry-run 检查「哪些文件会被打进包」
+# 3) Dry-run before publishing to check "which files will be packed"
 npm pack --dry-run -w @voxel-tool/core
-# 应只看到 dist/ 与 package.json、README、LICENSE，不应出现 src/ 或 node_modules/
+# Should only show dist/ plus package.json, README, LICENSE — no src/ or node_modules/
 
-# 4) 顺序发布（组件依赖 core / viewer，先发 core，再 viewer，最后各框架组件）
+# 4) Publish in order (components depend on core / viewer: core first, then viewer, then framework components)
 npm publish -w @voxel-tool/core    --access public
 npm publish -w @voxel-tool/viewer  --access public
 npm publish -w @voxel-tool/react   --access public
@@ -56,38 +56,38 @@ npm publish -w @voxel-tool/svelte  --access public
 npm publish -w @voxel-tool/qwik    --access public
 ```
 
-> 一键脚本：根目录 `package.json` 的 `build` 后依次 publish 三个 workspace 即可。
+> One-shot script: after `build` in the root `package.json`, publish the workspaces in order.
 
-## 4. 验证发布内容
+## 4. Verify the published contents
 
-发布前务必 `npm pack --dry-run` 检查 `files` 字段是否生效：
+Always run `npm pack --dry-run` before publishing to confirm the `files` field works:
 
 ```bash
 npm pack --dry-run -w @voxel-tool/react
-# 预期: 仅包含 dist/index.js (+ 可能的 style)、package.json、README.md、LICENSE
+# Expected: only dist/index.js (+ maybe style), package.json, README.md, LICENSE
 ```
 
-若出现 `src/` 或 `node_modules/`，说明 `files` 配置有误，需修正。
+If `src/` or `node_modules/` shows up, the `files` config is wrong and must be fixed.
 
-## 5. CI 自动发布（推荐：Trusted Publishing，tokenless）
+## 5. CI auto-publish (recommended: Trusted Publishing, tokenless)
 
-现代做法是 **npm Trusted Publishing**：通过 GitHub Actions 的 OIDC 身份向 npm 证明，
-npm 自动签发短期凭证，**无需在仓库里存储任何令牌**。
+The modern approach is **npm Trusted Publishing**: GitHub Actions proves its identity to npm via OIDC,
+and npm issues a short-lived token automatically — **no token needs to be stored in the repo**.
 
-### 5.1 在 npm 侧登记「可信发布者」
+### 5.1 Register a "Trusted Publisher" on the npm side
 
-对每个包（或整个 scope）：
+For each package (or the whole scope):
 
-1. 登录 npm → 进入包（或 scope）的 **Settings → Publishing access**。
-2. 添加 **Trusted Publisher**，填写：
-   - GitHub 仓库：`Maicarons/voxel-tool`
-   - 工作流文件名：`publish.yml`
-   - 环境（可选）
-3. 保存。
+1. Log in to npm → open the package's (or scope's) **Settings → Publishing access**.
+2. Add a **Trusted Publisher** with:
+   - GitHub repository: `Maicarons/voxel-tool`
+   - Workflow file name: `publish.yml`
+   - Environment (optional)
+3. Save.
 
-> 可信发布可在包**首次发布前**登记；npm 会按 OIDC 断言匹配包名并创建包。
+> Trusted Publishing can be registered **before** the package's first publish; npm matches the package name via the OIDC assertion and creates the package.
 
-### 5.2 工作流（本仓库已提供 `.github/workflows/publish.yml`）
+### 5.2 Workflow (already provided as `.github/workflows/publish.yml`)
 
 ```yaml
 name: Publish to npm
@@ -96,7 +96,7 @@ on:
     types: [published]
 permissions:
   contents: read
-  id-token: write   # 供 npm Trusted Publishing (OIDC) 使用，无需 NPM_TOKEN
+  id-token: write   # for npm Trusted Publishing (OIDC); no NPM_TOKEN needed
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -119,32 +119,32 @@ jobs:
       - run: npm publish -w @voxel-tool/qwik --provenance --access public
 ```
 
-触发方式：在 GitHub 创建 **Release**（打 tag + 发布），CI 自动发布全部八个包。
-`--provenance` 会生成供应链溯源证明（需 OIDC，与可信发布天然契合）。
+Trigger: create a **Release** on GitHub (tag + publish) and CI publishes all eight packages automatically.
+`--provenance` generates a supply-chain provenance attestation (needs OIDC, which pairs naturally with Trusted Publishing).
 
-## 6. 备选：粒度访问令牌（GAT）
+## 6. Alternative: Granular Access Token (GAT)
 
-若无法使用 OIDC（如自托管 Runner），可用 **Granular Access Token**：
+If OIDC is unavailable (e.g. self-hosted runners), use a **Granular Access Token**:
 
 ```bash
 npm token create --granular --package "@voxel-tool/core" --permissions publish --bypass-2fa --expiry 30d
 ```
 
-- 必须在创建时勾选 **Bypass 2FA**，且 **90 天内过期**。
-- 存入仓库 Secret `NPM_TOKEN`，并在 `publish.yml` 中通过 `env.NODE_AUTH_TOKEN` 引用该 Secret。
-- 经典长期令牌已被吊销，**不要**再用旧教程的 `NPM_TOKEN` 长期方案。
+- You must check **Bypass 2FA** at creation, and it **expires within 90 days**.
+- Store it as the repo Secret `NPM_TOKEN`, and reference it in `publish.yml` via `env.NODE_AUTH_TOKEN`.
+- The classic long-lived token has been revoked — **do not** use the old `NPM_TOKEN` long-lived approach.
 
-## 7. 版本与发版顺序
+## 7. Versions and publish order
 
-- 八个包版本建议保持同步（monorepo 惯例）。
-- 发布顺序：先 `core`，再 `viewer`（框架组件都依赖它），最后 `react` / `vue` / `solid` / `preact` / `svelte` / `qwik`，避免消费者装到不兼容版本。
-- 升级版本：`npm version patch/minor/major -w <pkg>`，提交并打 tag，再发 Release。
+- Keep all eight packages on the same version (monorepo convention).
+- Publish order: `core` first, then `viewer` (framework components depend on it), then `react` / `vue` / `solid` / `preact` / `svelte` / `qwik`, to avoid consumers installing incompatible versions.
+- Bump version: `npm version patch/minor/major -w <pkg>`, commit and tag, then create a Release.
 
-## 8. 常见问题
+## 8. FAQ
 
-- **`E402 must use --access public`**：作用域包首次发布忘记 `--access public`（本仓库 `publishConfig` 已兜底）。
-- **`E404` / 2FA 报错**：会话令牌过期或 2FA 未通过，重新 `npm login`。
-- **`npm publish` 卡在 2FA**：本地发布需在 `npm login` 后的 2 小时会话内完成 2FA 挑战。
-- **CI 报无权限发布**：检查 npm 侧是否登记了 Trusted Publisher，且 `permissions.id-token: write` 已加。
+- **`E402 must use --access public`**: a scoped package's first publish forgot `--access public` (this repo's `publishConfig` covers it).
+- **`E404` / 2FA error**: the session token expired or 2FA wasn't passed; run `npm login` again.
+- **`npm publish` stuck at 2FA**: a local publish must complete the 2FA challenge within the 2-hour session after `npm login`.
+- **CI reports no permission to publish**: check that the Trusted Publisher is registered on the npm side and `permissions.id-token: write` is set.
 
-速查见仓库根 [PUBLISHING.md](https://github.com/Maicarons/voxel-tool/blob/main/PUBLISHING.md)。
+Quick reference: [PUBLISHING.md](https://github.com/Maicarons/voxel-tool/blob/main/PUBLISHING.md).

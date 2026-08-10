@@ -1,20 +1,20 @@
-# Usage
+# 使用
 
-## 1. Core library `@voxel-tool/core`
+## 1. 核心库 `@voxel-tool/core`
 
-### Create a model and write it to `.vox`
+### 创建一个模型并写入 `.vox`
 
 ```js
 import { VoxelGrid, toVoxBytes, rainbowPalette } from '@voxel-tool/core';
 
 const grid = new VoxelGrid(40, 40, 50);
 
-// Gray base (palette index 255 is gray)
+// 灰底座（调色板索引 255 为灰）
 for (let x = 4; x < 36; x++)
   for (let y = 4; y < 36; y++)
     for (let z = 0; z < 3; z++) grid.set(x, y, z, 255);
 
-// Rainbow sphere: gradient from bottom to top
+// 彩虹球：由下到上渐变
 const R = 14;
 grid.addSphere(20, 20, 24, R, (dx, dy, dz) => {
   const frac = Math.max(0, Math.min(1, (dz + R) / (2 * R)));
@@ -22,44 +22,44 @@ grid.addSphere(20, 20, 24, R, (dx, dy, dz) => {
 });
 
 const palette = rainbowPalette();
-const bytes = toVoxBytes(grid, palette); // Uint8Array, ready to write to disk or download
+const bytes = toVoxBytes(grid, palette); // Uint8Array，可直接写入文件或下载
 ```
 
-### Read a `.vox`
+### 读取一个 `.vox`
 
 ```js
 import { parseVox } from '@voxel-tool/core';
 
-// input can be Uint8Array / ArrayBuffer / Node Buffer
+// input 可为 Uint8Array / ArrayBuffer / Node Buffer
 const { version, models, palette } = parseVox(bytes);
 // models: [{ size: [sx, sy, sz], voxels: [{ x, y, z, i }] }]
-// palette: 256 entries [r, g, b, a], index 0 is transparent
+// palette: 256 项 [r, g, b, a]，索引 0 透明
 console.log(models[0].voxels.length, version);
 ```
 
-### Palette helpers
+### 调色板工具
 
 ```js
 import { defaultPalette, rainbowPalette, hsvToRgb } from '@voxel-tool/core';
 
-defaultPalette();              // 256 entries [r,g,b,a], the MagicaVoxel default palette
-rainbowPalette();              // rainbow gradient on 1..254, 255 is the gray base
+defaultPalette();              // 256 项 [r,g,b,a]，MagicaVoxel 默认调色板
+rainbowPalette();              // 1..254 彩虹渐变，255 为灰基座
 hsvToRgb(0.3, 0.8, 1.0);       // -> [r,g,b] 0..255
 ```
 
-### Download a `.vox` in the browser
+### 浏览器中下载 `.vox`
 
 ```js
 import { downloadVox } from '@voxel-tool/core';
-downloadVox(grid, 'my-model.vox', palette); // triggers a browser download
+downloadVox(grid, 'my-model.vox', palette); // 触发浏览器下载
 ```
 
-## 2. Viewer components
+## 2. 查看器组件
 
-`VoxViewer` accepts the model in two ways:
+`VoxViewer` 接受两种方式的数据源：
 
-- **`src`**: `.vox` binary (`ArrayBuffer` / `Uint8Array`); the component calls `parseVox` internally.
-- **`model` + `palette`**: an already-parsed model (the return value of `parseVox`).
+- **`src`**：`.vox` 二进制（`ArrayBuffer` / `Uint8Array`），组件内部调用 `parseVox` 解析。
+- **`model` + `palette`**：已解析的模型（来自 `parseVox` 的返回值）。
 
 ### React
 
@@ -145,7 +145,7 @@ export function App() {
 }
 ```
 
-### Svelte 5 (runes)
+### Svelte 5（runes）
 
 ```svelte
 <script>
@@ -187,7 +187,7 @@ export const App = component$(() => {
 });
 ```
 
-> The Qwik component mounts the viewer only when it becomes visible in the browser (`useVisibleTask$`), which fits Qwik's resumability model natively.
-> Don't forget to enable the `@builder.io/qwik/vite` optimizer in your host project's Vite config.
+> Qwik 组件在浏览器可见时才挂载查看器（基于 `useVisibleTask$`），天然契合 Qwik 的「可恢复性」。
+> 别忘了在宿主项目的 Vite 配置启用 `@builder.io/qwik/vite` 优化器。
 
-See [Component Examples](/components/react-viewer) for more props.
+更多属性见 [组件示例](/zh/components/react-viewer)。

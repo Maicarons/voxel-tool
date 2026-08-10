@@ -5,55 +5,55 @@
 [![npm](https://img.shields.io/badge/npm-%40voxel--tool%2Fcore-blue)](https://www.npmjs.com/org/voxel-tool)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core library for reading/writing, plus real 3D viewer components built on Three.js — available for **React / Vue / SolidJS / Preact / Svelte / Qwik**.
+一套用于 **MagicaVoxel `.vox` 文件** 的 JavaScript 工具集：纯 JS 读写核心库 + 基于 Three.js 真实 3D 渲染的查看器组件，覆盖 **React / Vue / SolidJS / Preact / Svelte / Qwik** 六大框架。
 
-- 📦 **`@voxel-tool/core`** — Dependency-free core (`.vox` read/write, palettes, voxel grid `VoxelGrid`), runs in Node and the browser with zero runtime dependencies.
-- 🧩 **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses the same rendering implementation.
-- ⚛️ **`@voxel-tool/react`** — React 3D viewer component.
-- 🟢 **`@voxel-tool/vue`** — Vue 3 3D viewer component.
-- 🔵 **`@voxel-tool/solid`** — SolidJS 3D viewer component.
-- 🟡 **`@voxel-tool/preact`** — Preact 3D viewer component.
-- 🧡 **`@voxel-tool/svelte`** — Svelte 5 3D viewer component.
-- 💜 **`@voxel-tool/qwik`** — Qwik 3D viewer component.
+- 📦 **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 读写、调色板、体素网格（`VoxelGrid`），Node 与浏览器通用，零运行时依赖。
+- 🧩 **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用同一套渲染实现。
+- ⚛️ **`@voxel-tool/react`** — React 3D 查看器组件。
+- 🟢 **`@voxel-tool/vue`** — Vue 3 3D 查看器组件。
+- 🔵 **`@voxel-tool/solid`** — SolidJS 3D 查看器组件。
+- 🟡 **`@voxel-tool/preact`** — Preact 3D 查看器组件。
+- 🧡 **`@voxel-tool/svelte`** — Svelte 5 3D 查看器组件。
+- 💜 **`@voxel-tool/qwik`** — Qwik 3D 查看器组件。
 
-> The rendering follows mainstream `.vox` viewers (MagicaVoxel / `threejs-vox-loader` / coding.kiwi's *Rendering .vox Files*): every voxel is a real 3D cube correctly occluded by the WebGL depth buffer; only exposed faces are generated (face culling), trimming 6×N faces down to the outer shell so even large models render instantly. All framework components share the single `@voxel-tool/viewer` implementation — no per-framework re-implementation of the renderer.
+> 渲染原理参考主流 `.vox` viewer（MagicaVoxel / `threejs-vox-loader` / coding.kiwi 的 *Rendering .vox Files*）：每个体素是真实 3D 立方体，靠 WebGL 深度缓冲正确遮挡；只对暴露面生成几何（面剔除），把 6×N 个面砍到外壳，大模型也能秒渲。所有框架组件共享 `@voxel-tool/viewer` 同一份实现，不存在「每个框架重写一遍渲染」的重复代码。
 
 ---
 
-## Repository structure
+## 仓库结构
 
 ```
 voxel-tool/
 ├── packages/
-│   ├── core/        @voxel-tool/core    dependency-free core (read/write / palettes / grid)
-│   ├── viewer/      @voxel-tool/viewer  framework-agnostic viewer core (Three.js)
-│   ├── react/       @voxel-tool/react   React 3D viewer component
-│   ├── vue/         @voxel-tool/vue     Vue 3 3D viewer component
-│   ├── solid/       @voxel-tool/solid   SolidJS 3D viewer component
-│   ├── preact/      @voxel-tool/preact  Preact 3D viewer component
-│   ├── svelte/      @voxel-tool/svelte  Svelte 5 3D viewer component
-│   └── qwik/        @voxel-tool/qwik     Qwik 3D viewer component
-├── docs/           VitePress documentation site
+│   ├── core/        @voxel-tool/core    纯 JS 核心库 (读写/调色板/网格)
+│   ├── viewer/      @voxel-tool/viewer  框架无关查看器核心 (Three.js)
+│   ├── react/       @voxel-tool/react   React 3D 查看器组件
+│   ├── vue/         @voxel-tool/vue     Vue 3 3D 查看器组件
+│   ├── solid/       @voxel-tool/solid   SolidJS 3D 查看器组件
+│   ├── preact/      @voxel-tool/preact  Preact 3D 查看器组件
+│   ├── svelte/      @voxel-tool/svelte  Svelte 5 3D 查看器组件
+│   └── qwik/        @voxel-tool/qwik     Qwik 3D 查看器组件
+├── docs/           VitePress 文档站点
 ├── .github/
-│   └── workflows/   CI + publish automation
+│   └── workflows/   CI + 发布自动化
 ├── LICENSE
 ├── README.md
-└── package.json    npm workspaces root
+└── package.json     npm workspaces 根
 ```
 
-## Quick start
+## 快速开始
 
 ```bash
-# Install (npm workspaces links all packages automatically)
+# 安装 (npm workspaces 会自动链接所有包)
 npm install
 
-# Build all packages (output goes to packages/*/dist)
+# 构建全部包 (产物进入 packages/*/dist)
 npm run build
 
-# Run tests
+# 运行测试
 npm test
 
-# Preview each framework's component example locally
+# 本地预览各框架组件示例
 npm run dev:react    # -> http://localhost:5173
 npm run dev:vue      # -> http://localhost:5174
 npm run dev:solid    # -> http://localhost:5176
@@ -62,7 +62,7 @@ npm run dev:svelte   # -> http://localhost:5177
 npm run dev:qwik     # -> http://localhost:5178
 ```
 
-### Read and view a `.vox`
+### 读取并查看一个 .vox
 
 ```jsx
 // React
@@ -106,7 +106,7 @@ function App() {
 ```
 
 ```jsx
-// Preact (import from 'preact' / 'preact/hooks')
+// Preact (import 来自 'preact' / 'preact/hooks')
 import { VoxViewer } from '@voxel-tool/preact';
 import { parseVox } from '@voxel-tool/core';
 
@@ -138,7 +138,7 @@ export function App() {
 ```
 
 ```tsx
-// Qwik (the viewer mounts only when visible in the browser)
+// Qwik (组件在浏览器可见时才挂载查看器)
 import { component$ } from '@builder.io/qwik';
 import { VoxViewer } from '@voxel-tool/qwik';
 import { parseVox } from '@voxel-tool/core';
@@ -151,21 +151,21 @@ export const App = component$(() => {
 });
 ```
 
-## Documentation
+## 文档
 
-Full documentation (installation, usage, API, component examples, npm publishing) is available online: **https://maicarons.github.io/voxel-tool/**
+完整文档（安装、使用、API、组件示例、npm 发布方案）在线阅读：**https://maicarons.github.io/voxel-tool/**
 
-Source lives in **[docs/](docs/)** (VitePress).
+源码在 **[docs/](docs/)**（VitePress）。
 
-Start the docs site locally:
+本地启动文档站点：
 
 ```bash
 npm run docs:dev
 ```
 
-## Publishing to npm
+## 发布到 npm
 
-See [PUBLISHING.md](PUBLISHING.md) and [docs/guide/publishing](https://maicarons.github.io/voxel-tool/guide/publishing).
+见 [PUBLISHING.md](PUBLISHING.md) 与 [docs/guide/publishing.md](docs/guide/publishing.md)。
 
 ## License
 
@@ -173,4 +173,4 @@ See [PUBLISHING.md](PUBLISHING.md) and [docs/guide/publishing](https://maicarons
 
 ---
 
-🇨🇳 中文版说明见 [README_zh.md](./README_zh.md)。
+🇺🇸 English version: [README.md](./README.md).
