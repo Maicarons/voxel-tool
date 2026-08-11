@@ -1,27 +1,41 @@
 {
   "name": "@voxel-tool/viewer",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Framework-agnostic Three.js voxel viewer core (buildVoxelGeometry + createVoxelViewer), shared by the React/Vue/Solid/Preact/Svelte/Qwik components",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
+  "types": "./types/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "types"
+  ],
   "scripts": {
     "build": "vite build",
-    "test": "node test.mjs",
+    "test": "vitest run",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@voxel-tool/core": "^0.1.1",
-    "three": "^0.160.0"
+    "@voxel-tool/core": "^0.2.0",
+    "three": "^0.184.0"
   },
   "devDependencies": {
-    "vite": "^5.4.11"
+    "vite": "^7.0.0"
   },
-  "keywords": ["vox", "magicavoxel", "voxel", "three", "viewer", "voxel-tool"],
+  "keywords": [
+    "vox",
+    "magicavoxel",
+    "voxel",
+    "three",
+    "viewer",
+    "voxel-tool"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -29,7 +43,13 @@
     "directory": "packages/viewer"
   },
   "homepage": "https://github.com/Maicarons/voxel-tool#readme",
-  "bugs": { "url": "https://github.com/Maicarons/voxel-tool/issues" },
-  "publishConfig": { "access": "public" },
-  "engines": { "node": ">=18" }
+  "bugs": {
+    "url": "https://github.com/Maicarons/voxel-tool/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

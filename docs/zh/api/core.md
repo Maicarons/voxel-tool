@@ -4,8 +4,8 @@
 
 ```js
 import {
-  VoxelGrid, toVoxBytes, downloadVox, parseVox,
-  defaultPalette, hsvToRgb, rainbowPalette, MAGIC, VERSION,
+  VoxelGrid, toVoxBytes, toVoxBytesScene, downloadVox, parseVox,
+  defaultPalette, hsvToRgb, rainbowPalette, ROTATION_MATRICES, MAGIC, VERSION,
 } from '@voxel-tool/core';
 ```
 
@@ -34,21 +34,46 @@ const bytes = toVoxBytes(grid, palette); // -> Uint8Array
 
 把网格序列化为 `.vox` 二进制（`MAGIC='VOX '` + version 150 + MAIN/SIZE/XYZI/RGBA chunk）。
 
+## `toVoxBytesScene({ models, scene, materials }, palette)`
+
+```js
+const bytes = toVoxBytesScene({ models, scene, materials }, palette); // -> Uint8Array
+```
+
+把 **多模型 + 场景图 + 材质** 序列化为 `.vox`（与 `parseVox` 的 `scene` / `materials` 互逆）。写入结构：根 `nGRP` → 每个实例一个 `nTRN` + `nSHP`，外加每个材质一个 `MATL` chunk。
+
+- `models`：与 `parseVox` 的 `models` 同形状。
+- `scene`：实例数组（`{ name?, hidden?, translation?, rotation?, modelId, voxels? }`）。若省略 `voxels`，由 `models[modelId]` 解析。
+- `materials`：`Record<number, Material>`，即 `parseVox` 返回之物。
+- `palette`：256 项调色板。
+
+> 只要每个材质只设置文件原本包含的字段，`parseVox` ↔ `toVoxBytesScene` 可无损往返（字节一致）。
+
 ## `parseVox(input)`
 
 ```js
-const { version, models, palette } = parseVox(input);
+const { version, models, palette, scene, materials } = parseVox(input);
 ```
 
-解析 `.vox` 二进制。
+解析 `.vox` 二进制 —— 包括 **场景图**（`nTRN` / `nGRP` / `nSHP`）与 **材质**（`MATL`）。
 
 - `input`：`Uint8Array` / `ArrayBuffer` / Node `Buffer`。
 - 返回：
   - `version: number`
   - `models: Array<{ size: [sx, sy, sz], voxels: Array<{ x, y, z, i }> }>`
   - `palette: Array<[r, g, b, a]> | null`（256 项，`a=0` 表示透明；文件无 RGBA chunk 时为 `null`）
+  - `scene: Array<Instance>` —— **始终有值**。旧式单模型文件会自动合成一个 identity 实例。每个实例：
+    - `name: string`（节点名，`_name`）
+    - `hidden: boolean`（`_hidden`）
+    - `translation: [x, y, z]`（体素空间偏移，`_t`）
+    - `rotation: number`（0..23 旋转索引，`_r`；对应 `ROTATION_MATRICES` 之一）
+    - `modelId: number`（索引到 `models`）
+    - `voxels: Array<{ x, y, z, i }>`（由 `models[modelId]` 解析；便于直接渲染）
+  - `materials: Record<number, Material>` —— 键为 MATL id（1..255）。每个材质只含文件中实际出现的字段（如 `type`、`metalness`、`roughness`、`alpha`、`emissive`、`ior` …），因此解析 → `toVoxBytesScene` 在字段一致时可 **字节级无损往返**。
 
 > 索引映射严格遵循规范：`stream[i]`（i=0..254）→ 调色板索引 `i+1`；`stream[255]` → 索引 `0`。
+
+> 根组统一做 z-up → y-up 变换（`rotateX(-π/2)`）；每个实例的 `translation`/`rotation` 来自场景图。把 `scene` 配合 `@voxel-tool/viewer` 的 `instances` 选项，即可忠实还原 MagicaVoxel 的多模型布局。
 
 ## `downloadVox(grid, filename, palette)`
 
@@ -66,6 +91,7 @@ const { version, models, palette } = parseVox(input);
 
 - `MAGIC`：`'VOX '`（4 字节）
 - `VERSION`：`150`
+- `ROTATION_MATRICES`：`number[][][]`（24 个）—— MagicaVoxel `_r` 索引所用的带符号置换旋转集。`ROTATION_MATRICES[r]` 是 3×3 矩阵；场景实例的 `rotation` 字段即其下标。
 
 ## 示例
 

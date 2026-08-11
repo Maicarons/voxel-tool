@@ -3,7 +3,9 @@
 框架无关的 Three.js 体素查看器核心。所有框架组件（React / Vue / Solid / Preact / Svelte / Qwik）都复用这里的同一套渲染实现，**你也可以完全脱离 UI 框架，直接在任意 DOM 容器里挂载查看器**。
 
 ```js
-import { createVoxelViewer, buildVoxelGeometry } from '@voxel-tool/viewer';
+import {
+  createVoxelViewer, buildVoxelGeometry, buildVoxelBuckets, makeMaterial,
+} from '@voxel-tool/viewer';
 ```
 
 ## `createVoxelViewer(container, options)`
@@ -15,24 +17,26 @@ import { createVoxelViewer, buildVoxelGeometry } from '@voxel-tool/viewer';
 | `container` | `HTMLElement` | — | 目标 DOM 元素（必须有宽高） |
 | `options.src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` 二进制；传入后内部调用 `parseVox` 解析 |
 | `options.model` | `{ size, voxels }` | `null` | 已解析模型（来自 `parseVox` 的 `models[0]`） |
-| `options.palette` | `Array<[r,g,b,a]>` | `null` | 256 项调色板；与 `model` 配套 |
+| `options.instances` | `Array<Instance>` | `null` | 多实例场景（来自 `parseVox` 的 `scene`）：每个 `{ voxels, translation?, rotation?, hidden?, name? }` 按世界坐标摆放。多模型 `.vox` 请用它代替 `model` |
+| `options.palette` | `Array<[r,g,b,a]>` | `null` | 256 项调色板；与 `model` / `instances` 配套 |
+| `options.materials` | `Record<number, Material>` | `null` | MATL 材质（来自 `parseVox` 的 `materials`）；颜色索引对应到材质的体素会用 `MeshStandardMaterial`（金属度 / 粗糙度 / 透明度 / 自发光）渲染，而非默认 `MeshLambertMaterial` |
 | `options.background` | `string` | `'#16181e'` | 画布背景色 |
 | `options.width` | `number` | `480` | 初始宽度（px） |
 | `options.height` | `number` | `480` | 初始高度（px） |
 | `options.onInfo` | `(info: [number, number] \| null) => void` | `null` | 重建后回调，参数为 `[体素数, 面数]` |
 
-> `src` 与 `model` 二选一；两者都给时优先用 `model`。
+> 单模型传 `src` / `model`，多模型传 `instances`；两者都给时优先用 `instances`。
 > 必须在浏览器环境调用（依赖 `window` / WebGL），SSR 下会抛错。
 
 **返回值（控制器）：**
 
 | 方法 | 说明 |
 |---|---|
-| `update(input?)` | 数据变化后重建网格：`update({ src?, model?, palette? })` |
+| `update(input?)` | 数据变化后重建网格：`update({ src?, model?, instances?, palette?, materials? })` |
 | `setBackground(color)` | 修改画布背景色 |
 | `dispose()` | 卸载：取消动画帧、断开 ResizeObserver、释放 GPU 资源 |
 
-### 最小示例（无框架）
+### 最小示例（无框架，单模型）
 
 ```js
 import { createVoxelViewer } from '@voxel-tool/viewer';
@@ -53,9 +57,26 @@ const viewer = createVoxelViewer(el, {
 // viewer.dispose();
 ```
 
+### 多模型场景（含材质）
+
+```js
+import { createVoxelViewer } from '@voxel-tool/viewer';
+import { parseVox } from '@voxel-tool/core';
+
+const buf = await fetch('/scene.vox').then((r) => r.arrayBuffer());
+const { palette, scene, materials } = parseVox(buf);
+
+const el = document.getElementById('viewer');
+const viewer = createVoxelViewer(el, {
+  instances: scene,   // 每个条目已自带 voxels / translation / rotation
+  palette,
+  materials,          // 金属 / 玻璃 / 自发光体素都能正确渲染
+});
+```
+
 ## `buildVoxelGeometry(voxels, palette)`
 
-纯函数：把体素数组编译成 Three.js `BufferGeometry`（含顶点色与面剔除后的索引）。
+纯函数：把体素数组编译成 Three.js `BufferGeometry`（含顶点色与面剔除后的索引）。几何处于**体素局部空间**，由查看器统一做 z-up → y-up 变换。
 
 | 参数 | 类型 | 说明 |
 |---|---|---|
@@ -73,6 +94,33 @@ const geo = buildVoxelGeometry(model.voxels, palette);
 const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
 ```
 
+## `buildVoxelBuckets(voxels, palette, materials?)`
+
+纯函数：按颜色索引（材质 id）把体素分桶，返回 `Array<{ geometry, materialId }>` —— 每个不同材质 id 一项。当你想自己驱动 Three.js 而非用 `createVoxelViewer` 时很有用。
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `voxels` | `Array<{ x, y, z, i }>` | 体素列表 |
+| `palette` | `Array<[r,g,b,a]>` | 256 项调色板 |
+| `materials` | `Record<number, Material>` | 可选 MATL 映射 |
+
+```js
+import * as THREE from 'three';
+import { buildVoxelBuckets, makeMaterial } from '@voxel-tool/viewer';
+
+for (const { geometry, materialId } of buildVoxelBuckets(model.voxels, palette, materials)) {
+  const mesh = new THREE.Mesh(geometry, makeMaterial(materialId, materials));
+  scene.add(mesh);
+}
+```
+
+## `makeMaterial(materialId, materials?)`
+
+按材质 id 返回 Three.js 材质：
+
+- `materialId === 0`（或无对应条目）：`MeshLambertMaterial`（默认，顶点色）。
+- 否则：`MeshStandardMaterial`，由 `materials[materialId]` 推导 `metalness` / `roughness` / `alpha`（→ `transparent` + `opacity`）/ `emissive`。
+
 ## 渲染原理
 
 - 每个体素是真实 3D 立方体，靠 WebGL **深度缓冲**正确遮挡（凹形、相邻遮挡不再有排序瑕疵）。
@@ -80,3 +128,4 @@ const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: t
 - **正交等距相机** `OrthographicCamera` 摆 `(+,+,+)` 角 → MagicaVoxel 经典观感。
 - `HemisphereLight` + 主/补 `DirectionalLight` 按面法线着色。
 - `OrbitControls` 自由旋转 / 缩放 / 平移。
+- 根 `Group` 统一做一次 z-up → y-up 旋转；每个实例的 `translation` / `rotation` 来自场景图。

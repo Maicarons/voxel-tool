@@ -1,4 +1,10 @@
-// VOX 写入器 (纯 JS, 浏览器/Node 通用)
+// VOX writer (pure JS, browser/Node通用的).
+//
+// - toVoxBytes(grid, palette):           单模型 (VoxelGrid) -> .vox 二进制 (向后兼容)
+// - toVoxBytesScene(data, palette):      多模型 + 场景图 + 材质 -> .vox 二进制 (支持往返)
+// - downloadVox(...):                    浏览器下载辅助
+//
+// 场景图块顺序: SIZE/XYZI (每个模型) -> RGBA -> MATL -> nGRP/nTRN/nSHP.
 import { MAGIC, VERSION } from './constants.js';
 
 function str4(s) {
@@ -12,10 +18,7 @@ function concat(...arrays) {
   for (const a of arrays) len += a.length;
   const out = new Uint8Array(len);
   let off = 0;
-  for (const a of arrays) {
-    out.set(a, off);
-    off += a.length;
-  }
+  for (const a of arrays) { out.set(a, off); off += a.length; }
   return out;
 }
 
@@ -63,11 +66,76 @@ function rgbaChunk(palette) {
   return chunk('RGBA', c);
 }
 
-/**
- * 把 VoxelGrid 打包成完整 .vox 的 Uint8Array。
- * @param {VoxelGrid} grid
- * @param {Array|null} palette 长度256的 [[r,g,b,a],...]; 传 null 则不写 RGBA(用默认调色板)
- */
+// DICT: int32 numItems; 每项 int32 keyLen + key(str) + int32 valLen + val(str)
+function dictToBytes(dict) {
+  const keys = Object.keys(dict);
+  const parts = [];
+  const head = new Uint8Array(4);
+  new DataView(head.buffer).setUint32(0, keys.length, true);
+  parts.push(head);
+  for (const k of keys) {
+    const val = String(dict[k]);
+    const kb = new TextEncoder().encode(k);
+    const vb = new TextEncoder().encode(val);
+    const kh = new Uint8Array(4); new DataView(kh.buffer).setUint32(0, kb.length, true);
+    const vh = new Uint8Array(4); new DataView(vh.buffer).setUint32(0, vb.length, true);
+    parts.push(kh, kb, vh, vb);
+  }
+  return concat(...parts);
+}
+
+// MATL 块: 把高层材质对象写回. 与 parseMaterial 对称 —— 只要材质对象上
+// 定义了某字段(含 0/1 默认值), 就写出对应 key, 保证往返无损.
+function matlChunk(id, mat) {
+  const dict = {};
+  dict._type = mat.type || '_diffuse';
+  if (mat.metalness !== undefined) dict._metal = String(mat.metalness);
+  if (mat.roughness !== undefined) dict._rough = String(mat.roughness);
+  if (mat.alpha !== undefined) dict._alpha = String(mat.alpha);
+  if (mat.emissive !== undefined) dict._emit = String(mat.emissive);
+  if (mat.ior !== undefined) dict._ior = String(mat.ior);
+  if (mat.flux !== undefined) dict._flux = String(mat.flux);
+  if (mat.density !== undefined) dict._d = String(mat.density);
+  if (mat.specular !== undefined) dict._sp = String(mat.specular);
+  if (mat.glow !== undefined) dict._g = String(mat.glow);
+  const c = new Uint8Array(4);
+  new DataView(c.buffer).setUint32(0, id, true);
+  return chunk('MATL', concat(c, dictToBytes(dict)));
+}
+
+function nTRNChunk(nodeId, childId, { name = '', translation = [0, 0, 0], rotation = 0, hidden = false }) {
+  const nodeDict = {};
+  if (name) nodeDict._name = name;
+  if (hidden) nodeDict._hidden = '1';
+  const trnDict = { _t: translation.join(' '), _r: String(rotation) };
+  const cId = new Uint8Array(4);
+  new DataView(cId.buffer).setUint32(0, nodeId, true);
+  const cChild = new Uint8Array(4);
+  new DataView(cChild.buffer).setUint32(0, childId, true);
+  const reserved = new Uint8Array(4); // 已废弃, 恒 0
+  return chunk('nTRN', concat(cId, dictToBytes(nodeDict), cChild, reserved, dictToBytes(trnDict)));
+}
+
+function nGRPChunk(nodeId, children) {
+  const cId = new Uint8Array(4);
+  new DataView(cId.buffer).setUint32(0, nodeId, true);
+  const cNum = new Uint8Array(4);
+  new DataView(cNum.buffer).setUint32(0, children.length, true);
+  const cChildren = new Uint8Array(children.length * 4);
+  const dv = new DataView(cChildren.buffer);
+  for (let i = 0; i < children.length; i++) dv.setUint32(i * 4, children[i], true);
+  return chunk('nGRP', concat(cId, dictToBytes({}), cNum, cChildren));
+}
+
+function nSHPChunk(nodeId, modelId) {
+  const cId = new Uint8Array(4);
+  new DataView(cId.buffer).setUint32(0, nodeId, true);
+  const cModel = new Uint8Array(4);
+  new DataView(cModel.buffer).setUint32(0, modelId, true);
+  return chunk('nSHP', concat(cId, dictToBytes({}), cModel, dictToBytes({ _t: '0 0 0' })));
+}
+
+// 把 VoxelGrid 打包成完整 .vox 的 Uint8Array (单模型, 向后兼容).
 export function toVoxBytes(grid, palette = null) {
   const voxels = grid.list();
   let children = concat(sizeChunk(grid.sx, grid.sy, grid.sz), xyziChunk(voxels));
@@ -75,6 +143,60 @@ export function toVoxBytes(grid, palette = null) {
     if (palette.length !== 256) throw new Error('palette 必须有 256 项');
     children = concat(children, rgbaChunk(palette));
   }
+  const main = chunk('MAIN', new Uint8Array(0), children.length);
+  const header = new Uint8Array(8);
+  header.set(MAGIC, 0);
+  new DataView(header.buffer).setUint32(4, VERSION, true);
+  return concat(header, main, children);
+}
+
+/**
+ * 把多模型场景打包成 .vox 二进制 (支持场景图与材质, 可往返).
+ * @param {{models:Array, scene?:Array, materials?:object}} data
+ *   models: [{ size:[sx,sy,sz], voxels:[{x,y,z,i}] }]
+ *   scene:  [{ modelIndex, translation:[x,y,z], rotation, hidden?, name? }]
+ *           省略时每个模型生成一个 identity 实例
+ *   materials: { [id]: { type, metalness, roughness, alpha, emissive } }
+ * @param {Array|null} palette 长度256的 [[r,g,b,a],...]
+ */
+export function toVoxBytesScene(data, palette = null) {
+  const models = data.models || [];
+  const scene = data.scene && data.scene.length
+    ? data.scene
+    : models.map((_, i) => ({ modelIndex: i, translation: [0, 0, 0], rotation: 0, hidden: false, name: '' }));
+  const materials = data.materials || {};
+
+  let children = new Uint8Array(0);
+  for (const m of models) {
+    children = concat(children, sizeChunk(m.size[0], m.size[1], m.size[2]), xyziChunk(m.voxels));
+  }
+  if (palette) {
+    if (palette.length !== 256) throw new Error('palette 必须有 256 项');
+    children = concat(children, rgbaChunk(palette));
+  }
+  for (const id in materials) children = concat(children, matlChunk(Number(id), materials[id]));
+
+  // 场景图: 根 nGRP(0) -> 每个实例一个 nTRN -> nSHP
+  const N = scene.length;
+  const groupId = 0;
+  const trnIds = [];
+  const shpIds = [];
+  for (let j = 0; j < N; j++) { trnIds.push(1 + j); shpIds.push(1 + N + j); }
+  children = concat(children, nGRPChunk(groupId, trnIds));
+  for (let j = 0; j < N; j++) {
+    const inst = scene[j];
+    children = concat(
+      children,
+      nTRNChunk(trnIds[j], shpIds[j], {
+        name: inst.name || '',
+        translation: inst.translation || [0, 0, 0],
+        rotation: inst.rotation || 0,
+        hidden: !!inst.hidden,
+      }),
+      nSHPChunk(shpIds[j], inst.modelIndex),
+    );
+  }
+
   const main = chunk('MAIN', new Uint8Array(0), children.length);
   const header = new Uint8Array(8);
   header.set(MAGIC, 0);

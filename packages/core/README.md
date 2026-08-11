@@ -8,8 +8,9 @@ Dependency-free MagicaVoxel `.vox` read/write, palette, and `VoxelGrid` core lib
 |---|---|
 | `VoxelGrid` | Voxel container: `set(x,y,z,ci)`, `addSphere(...)`, `list()` |
 | `toVoxBytes(grid, palette?)` | Pack into a `Uint8Array` (write to file / upload / download) |
+| `toVoxBytesScene({ models, scene, materials }, palette?)` | Pack multi-model + scene-graph + MATL materials into a `Uint8Array` |
 | `downloadVox(grid, name, palette?)` | Trigger a `.vox` download in the browser |
-| `parseVox(arrayBuffer \| Uint8Array)` | Parse into `{ version, models, palette }` |
+| `parseVox(arrayBuffer \| Uint8Array)` | Parse into `{ version, models, palette, scene, materials }` (scene graph + MATL) |
 | `rainbowPalette()` / `defaultPalette()` / `hsvToRgb()` | Palette helpers |
 
 ## In Node
@@ -29,7 +30,7 @@ const info = parseVox(readFileSync('cube.vox'));
 console.log(info.models[0].voxels.length);            // 1000
 ```
 
-Verify with `node test.mjs` (write → read round-trip + palette consistency).
+Verify with `npm test` (Vitest: write → read round-trip, scene-graph + material round-trip, palette consistency).
 
 ## In the browser
 

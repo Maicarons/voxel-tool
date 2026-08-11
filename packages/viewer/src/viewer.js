@@ -1,35 +1,35 @@
 // viewer/src/viewer.js —— 框架无关的 Three.js 体素查看器控制器
 //
-// 这是「原项目 viewer 原理」的落地, 但与具体 UI 框架解耦:
-//   - 真实 3D 立方体 + WebGL 深度缓冲 (Z-buffer) 正确遮挡, 告别画家算法排序瑕疵;
-//   - OrthographicCamera 摆等距角度 -> MagicaVoxel 经典观感;
-//   - HemisphereLight + 主/补 DirectionalLight 按面法线着色;
-//   - OrbitControls: 左键拖拽旋转、滚轮缩放、右键平移;
-//   - 面剔除几何由 ./mesh.js 的 buildVoxelGeometry 提供。
-//
 // 用法 (任意框架):
-//   const v = createVoxelViewer(containerEl, { src, model, palette, onInfo });
-//   v.update({ model, palette });   // 数据变化时
-//   v.dispose();                    // 卸载时
+//   const v = createVoxelViewer(containerEl, { src, model, instances, palette, materials, onInfo });
+//   v.update({ model, instances, palette, materials });
+//   v.dispose();
+//
+// 支持两种数据来源:
+//   1) 单模型 (向后兼容): 传 `model`(已解析) 或 `src`(.vox 二进制), 渲染在原点.
+//   2) 多实例场景:        传 `instances`(数组, 每个含 voxels + 世界变换 translation/rotation),
+//      配合 `parseVox` 返回的 `scene` 使用, 正确还原 MagicaVoxel 的多模型/变换布局.
+//   `materials`(来自 parseVox 的 MATL) 会让对应体素用 MeshStandardMaterial 渲染金属/粗糙/透明/自发光.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { parseVox } from '@voxel-tool/core';
-import { buildVoxelGeometry } from './mesh.js';
+import { parseVox, ROTATION_MATRICES } from '@voxel-tool/core';
+import { buildVoxelGeometry, buildVoxelBuckets, makeMaterial } from './mesh.js';
 
 const DEFAULT_BG = '#16181e';
 
 /**
- * 在一个容器元素内挂载体素 3D 查看器。
- * @param {HTMLElement} container 目标 DOM 元素
+ * 在一个容器元素内挂载体素 3D 查看器.
+ * @param {HTMLElement} container
  * @param {object} [options]
- * @param {ArrayBuffer|Uint8Array} [options.src] .vox 二进制 (二选一)
- * @param {{size:number[],voxels:object[]}} [options.model] 已解析模型 (二选一)
+ * @param {ArrayBuffer|Uint8Array} [options.src] .vox 二进制 (单模型时用)
+ * @param {{size:number[],voxels:object[]}} [options.model] 已解析模型 (单模型时用)
+ * @param {Array} [options.instances] 多实例: [{ voxels, translation?, rotation?, hidden?, name? }]
  * @param {number[][]} [options.palette] 256 项 [r,g,b,a]
- * @param {string} [options.background] 画布背景色
- * @param {number} [options.width] 初始宽度 (px)
- * @param {number} [options.height] 初始高度 (px)
- * @param {(info: [number, number]|null) => void} [options.onInfo] 重建后回调: [体素数, 面数]
- * @returns {{ update: Function, setBackground: Function, dispose: Function }}
+ * @param {object} [options.materials] { id: { type, metalness, roughness, alpha, emissive } }
+ * @param {string} [options.background]
+ * @param {number} [options.width]
+ * @param {number} [options.height]
+ * @param {(info: [number, number]|null) => void} [options.onInfo]
  */
 export function createVoxelViewer(container, options = {}) {
   if (typeof window === 'undefined' || !container) {
@@ -43,13 +43,17 @@ export function createVoxelViewer(container, options = {}) {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(opts.background);
 
+  // 根 group: 统一施加 z-up -> three y-up 的翻转, 使多实例世界变换与全局朝向正确合成.
+  const sceneRoot = new THREE.Group();
+  sceneRoot.rotation.x = -Math.PI / 2;
+  scene.add(sceneRoot);
+
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.setSize(w, h);
   container.appendChild(renderer.domElement);
 
-  // 光照 (参考 threejs-vox-loader / coding.kiwi)
   scene.add(new THREE.HemisphereLight(0xffffff, 0x404050, 1.05));
   const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
   keyLight.position.set(1.5, 3, 2.5);
@@ -62,15 +66,48 @@ export function createVoxelViewer(container, options = {}) {
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
 
-  const material = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
-
-  let mesh = null;
+  let meshes = []; // { mesh, geometry, material }
   let raf = 0;
 
-  // 把相机摆成等距视角并把模型居中、缩放进可视范围 (正交相机与距离无关, 只调 frustum)
+  function disposeMeshes() {
+    for (const m of meshes) {
+      sceneRoot.remove(m.mesh);
+      m.geometry.dispose();
+      if (Array.isArray(m.material)) m.material.forEach((x) => x.dispose());
+      else m.material.dispose();
+    }
+    meshes = [];
+  }
+
+  function addInstance(voxels, palette, materials, translation, rotation, hidden) {
+    if (hidden) return;
+    const t = translation || [0, 0, 0];
+    const R = ROTATION_MATRICES[rotation] || ROTATION_MATRICES[0];
+    const m4 = new THREE.Matrix4().set(
+      R[0], R[1], R[2], t[0],
+      R[3], R[4], R[5], t[1],
+      R[6], R[7], R[8], t[2],
+      0, 0, 0, 1,
+    );
+
+    const useMaterials = materials && Object.keys(materials).length > 0;
+    const groups = useMaterials
+      ? buildVoxelBuckets(voxels, palette, materials)
+      : [{ geometry: buildVoxelGeometry(voxels, palette), materialId: 0 }];
+
+    for (const g of groups) {
+      const mat = makeMaterial(g.materialId, materials);
+      const mesh = new THREE.Mesh(g.geometry, mat);
+      mesh.matrixAutoUpdate = false;
+      mesh.matrix.copy(m4);
+      sceneRoot.add(mesh);
+      meshes.push({ mesh, geometry: g.geometry, material: mat });
+    }
+  }
+
   function fitCamera() {
-    if (!mesh) return;
-    const box = new THREE.Box3().setFromObject(mesh);
+    if (!meshes.length) return;
+    const box = new THREE.Box3().setFromObject(sceneRoot);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
@@ -91,31 +128,38 @@ export function createVoxelViewer(container, options = {}) {
   }
 
   function rebuild(input) {
-    if (mesh) {
-      scene.remove(mesh);
-      mesh.geometry.dispose();
-      mesh = null;
+    disposeMeshes();
+    const palette = input.palette;
+    const materials = input.materials;
+
+    if (input.instances && input.instances.length) {
+      for (const inst of input.instances) {
+        addInstance(inst.voxels, palette, materials, inst.translation, inst.rotation, inst.hidden);
+      }
+    } else {
+      let m = input.model;
+      if (!m && input.src) {
+        const info = parseVox(input.src);
+        m = info.models[0];
+        if (palette === undefined) input.palette = info.palette;
+      }
+      if (!m) { opts.onInfo?.(null); return; }
+      addInstance(m.voxels, palette, materials, [0, 0, 0], 0, false);
     }
-    let m = input.model, pal = input.palette;
-    if (!m && input.src) {
-      const info = parseVox(input.src);
-      m = info.models[0];
-      pal = info.palette;
-    }
-    if (!m) {
-      opts.onInfo?.(null);
-      return;
-    }
-    const geo = buildVoxelGeometry(m.voxels, pal);
-    mesh = new THREE.Mesh(geo, material);
-    scene.add(mesh);
+
     fitCamera();
-    const faceCount = geo.index.count / 6;
-    opts.onInfo?.([m.voxels.length, faceCount]);
+    let voxelCount = 0;
+    let faceCount = 0;
+    for (const m of meshes) {
+      voxelCount += m.geometry.getAttribute('color').count / 4; // 每个面4顶点 -> 体素数近似
+      faceCount += m.geometry.index.count / 6;
+    }
+    opts.onInfo?.([voxelCount, faceCount]);
   }
 
-  // 初始构建
-  if (opts.src || opts.model) rebuild({ src: opts.src, model: opts.model, palette: opts.palette });
+  if (opts.src || opts.model || opts.instances) {
+    rebuild({ src: opts.src, model: opts.model, instances: opts.instances, palette: opts.palette, materials: opts.materials });
+  }
 
   const animate = () => {
     raf = requestAnimationFrame(animate);
@@ -134,7 +178,7 @@ export function createVoxelViewer(container, options = {}) {
 
   return {
     update(input = {}) {
-      rebuild({ src: input.src, model: input.model, palette: input.palette });
+      rebuild({ src: input.src, model: input.model, instances: input.instances, palette: input.palette, materials: input.materials });
     },
     setBackground(color) {
       scene.background = new THREE.Color(color);
@@ -143,8 +187,7 @@ export function createVoxelViewer(container, options = {}) {
       cancelAnimationFrame(raf);
       ro.disconnect();
       controls.dispose();
-      if (mesh) mesh.geometry.dispose();
-      material.dispose();
+      disposeMeshes();
       renderer.dispose();
       if (renderer.domElement.parentNode === container) container.removeChild(renderer.domElement);
     },

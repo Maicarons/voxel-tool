@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/svelte",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Svelte 3D viewer component for MagicaVoxel .vox models (built on @voxel-tool/viewer + Three.js)",
   "type": "module",
   "main": "dist/index.js",
@@ -9,7 +9,9 @@
   "exports": {
     ".": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite --config example/vite.config.js",
     "build": "vite build",
@@ -21,15 +23,23 @@
     "svelte": "^5.0.0"
   },
   "dependencies": {
-    "@voxel-tool/core": "^0.1.1",
-    "@voxel-tool/viewer": "^0.1.1"
+    "@voxel-tool/core": "^0.2.0",
+    "@voxel-tool/viewer": "^0.2.0"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^4.0.0",
     "svelte": "^5.19.0",
     "vite": "^5.4.11"
   },
-  "keywords": ["vox", "magicavoxel", "voxel", "svelte", "three", "renderer", "voxel-tool"],
+  "keywords": [
+    "vox",
+    "magicavoxel",
+    "voxel",
+    "svelte",
+    "three",
+    "renderer",
+    "voxel-tool"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -37,7 +47,13 @@
     "directory": "packages/svelte"
   },
   "homepage": "https://github.com/Maicarons/voxel-tool#readme",
-  "bugs": { "url": "https://github.com/Maicarons/voxel-tool/issues" },
-  "publishConfig": { "access": "public" },
-  "engines": { "node": ">=18" }
+  "bugs": {
+    "url": "https://github.com/Maicarons/voxel-tool/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }

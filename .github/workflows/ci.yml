@@ -25,5 +25,8 @@ jobs:
       - name: Build all packages
         run: npm run build
 
+      - name: Type check (declarations)
+        run: npm run typecheck
+
       - name: Run tests
         run: npm test

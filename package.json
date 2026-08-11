@@ -12,6 +12,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "typecheck": "tsc --noEmit",
     "dev:react": "npm run dev -w @voxel-tool/react",
     "dev:vue": "npm run dev -w @voxel-tool/vue",
     "dev:solid": "npm run dev -w @voxel-tool/solid",
@@ -48,6 +49,9 @@
     "renderer"
   ],
   "devDependencies": {
-    "rimraf": "^6.0.1"
+    "@changesets/cli": "^2.31.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/vue",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Vue 3 3D viewer component for MagicaVoxel .vox models (built on @voxel-tool/viewer + Three.js)",
   "type": "module",
   "main": "dist/index.js",
@@ -8,7 +8,9 @@
   "exports": {
     ".": "./dist/index.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "dev": "vite --config example/vite.config.js",
     "build": "vite build",
@@ -20,15 +22,23 @@
     "vue": "^3.3.0"
   },
   "dependencies": {
-    "@voxel-tool/core": "^0.1.1",
-    "@voxel-tool/viewer": "^0.1.1"
+    "@voxel-tool/core": "^0.2.0",
+    "@voxel-tool/viewer": "^0.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
     "vite": "^5.4.11",
     "vue": "^3.5.13"
   },
-  "keywords": ["vox", "magicavoxel", "voxel", "vue", "three", "renderer", "voxel-tool"],
+  "keywords": [
+    "vox",
+    "magicavoxel",
+    "voxel",
+    "vue",
+    "three",
+    "renderer",
+    "voxel-tool"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -36,7 +46,13 @@
     "directory": "packages/vue"
   },
   "homepage": "https://github.com/Maicarons/voxel-tool#readme",
-  "bugs": { "url": "https://github.com/Maicarons/voxel-tool/issues" },
-  "publishConfig": { "access": "public" },
-  "engines": { "node": ">=18" }
+  "bugs": {
+    "url": "https://github.com/Maicarons/voxel-tool/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
