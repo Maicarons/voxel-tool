@@ -1,7 +1,7 @@
 {
   "name": "@voxel-tool/core",
-  "version": "0.1.0",
-  "description": "MagicaVoxel .vox 读写、调色板与 VoxelGrid 的纯 JS 核心库 (Node + 浏览器通用)",
+  "version": "0.1.1",
+  "description": "Dependency-free MagicaVoxel .vox read/write, palette, and VoxelGrid core library (Node + browser)",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",

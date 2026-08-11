@@ -1,7 +1,7 @@
 {
   "name": "@voxel-tool/svelte",
-  "version": "0.1.0",
-  "description": "MagicaVoxel .vox 体素模型的 Svelte 3D 查看器组件 (基于 @voxel-tool/viewer + Three.js)",
+  "version": "0.1.1",
+  "description": "Svelte 3D viewer component for MagicaVoxel .vox models (built on @voxel-tool/viewer + Three.js)",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -21,8 +21,8 @@
     "svelte": "^5.0.0"
   },
   "dependencies": {
-    "@voxel-tool/core": "^0.1.0",
-    "@voxel-tool/viewer": "^0.1.0"
+    "@voxel-tool/core": "^0.1.1",
+    "@voxel-tool/viewer": "^0.1.1"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^4.0.0",

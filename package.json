@@ -2,7 +2,7 @@
   "name": "voxel-tool",
   "version": "0.1.0",
   "private": true,
-  "description": "MagicaVoxel .vox 读写与体素模型 3D 查看器 (核心库 + 框架无关查看器 + React/Vue/Solid/Preact/Svelte/Qwik 组件)",
+  "description": "MagicaVoxel .vox read/write and 3D voxel model viewer - core library + framework-agnostic viewer + React/Vue/Solid/Preact/Svelte/Qwik components",
   "type": "module",
   "workspaces": [
     "packages/*",

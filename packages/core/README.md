@@ -1,22 +1,22 @@
-# 📦 `@vox/base` —— VOX 基底功能包 (纯 JS)
+# @voxel-tool/core
 
-Node 与浏览器通用的 .vox 读写 / 调色板 / `VoxelGrid`，是 `@vox/react`、`@vox/vue` 的可复用底座。
+Dependency-free MagicaVoxel `.vox` read/write, palette, and `VoxelGrid` core library for Node and the browser. This is the shared foundation for `@voxel-tool/react`, `@voxel-tool/vue`, and the other framework bindings.
 
-## 能力
+## Capabilities
 
-| 导出 | 说明 |
+| Export | Description |
 |---|---|
-| `VoxelGrid` | 体素容器：`set(x,y,z,ci)`、`addSphere(...)`、`list()` |
-| `toVoxBytes(grid, palette?)` | 打包成 `Uint8Array`（写入文件 / 上传 / 下载） |
-| `downloadVox(grid, name, palette?)` | 浏览器端直接下载 .vox |
-| `parseVox(arrayBuffer \| Uint8Array)` | 解析为 `{ version, models, palette }` |
-| `rainbowPalette()` / `defaultPalette()` / `hsvToRgb()` | 调色板工具 |
+| `VoxelGrid` | Voxel container: `set(x,y,z,ci)`, `addSphere(...)`, `list()` |
+| `toVoxBytes(grid, palette?)` | Pack into a `Uint8Array` (write to file / upload / download) |
+| `downloadVox(grid, name, palette?)` | Trigger a `.vox` download in the browser |
+| `parseVox(arrayBuffer \| Uint8Array)` | Parse into `{ version, models, palette }` |
+| `rainbowPalette()` / `defaultPalette()` / `hsvToRgb()` | Palette helpers |
 
-## 在 Node 里用
+## In Node
 
 ```js
 import { writeFileSync, readFileSync } from 'node:fs';
-import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette } from '@vox/base';
+import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette } from '@voxel-tool/core';
 
 const g = new VoxelGrid(10, 10, 10);
 for (let x = 0; x < 10; x++)
@@ -24,20 +24,20 @@ for (let x = 0; x < 10; x++)
     for (let z = 0; z < 10; z++)
       g.set(x, y, z, 1 + (x + y + z) % 200);
 
-writeFileSync('cube.vox', toVoxBytes(g));            // 默认调色板
+writeFileSync('cube.vox', toVoxBytes(g));            // default palette
 const info = parseVox(readFileSync('cube.vox'));
 console.log(info.models[0].voxels.length);            // 1000
 ```
 
-验证：`node test.mjs`（写回读回一致 + 调色板一致）。
+Verify with `node test.mjs` (write → read round-trip + palette consistency).
 
-## 在浏览器里用
+## In the browser
 
 ```js
-import { VoxelGrid, downloadVox, rainbowPalette } from '@vox/base';
+import { VoxelGrid, downloadVox, rainbowPalette } from '@voxel-tool/core';
 const g = new VoxelGrid(8, 8, 8);
-/* ... 填充 ... */
-downloadVox(g, 'my.vox', rainbowPalette());   // 浏览器直接下载
+/* ... fill ... */
+downloadVox(g, 'my.vox', rainbowPalette());   // browser download
 ```
 
-> Vite / 打包器里 `import { parseVox } from '@vox/base'` 即可；也可直接 `import` 本包 `src/index.js`。
+> With Vite / a bundler, `import { parseVox } from '@voxel-tool/core'` is all you need; you can also import the package's `src/index.js` directly.
