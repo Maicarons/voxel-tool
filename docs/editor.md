@@ -19,6 +19,7 @@ A full-featured **MagicaVoxel `.vox` editor** running entirely in your browser â
 | **Undo** | Undo last action (`Ctrl+Z`) |
 | **Grid Toggle** | Show/hide the coordinate grid overlay |
 | **Export PNG** | Render current view to a PNG image |
+| **Export 3D models** | Export the current model to **GLB / glTF / OBJ / STL / PLY / USDZ / FBX** (powered by `@voxel-tool/exporter`) |
 | **New Model** | Start fresh with an empty 24Ã—24Ã—24 canvas |
 | **Demo** | Loads a colorful sphere demo on first open |
 
@@ -28,6 +29,21 @@ A full-featured **MagicaVoxel `.vox` editor** running entirely in your browser â
 - **Scroll**: zoom in/out
 - **Right-click + drag** pan the view
 - **Paint/Erase**: select mode from toolbar, then left-click voxels
+
+## Export 3D models
+
+Use the **Export Model** control in the toolbar: pick a format from the dropdown, then click **Export Model** to download the current voxel model.
+
+| Format | Color | Best for |
+|---|---|---|
+| GLB / glTF | vertex colors | game engines, web, general use |
+| PLY | vertex colors | point clouds, scanning |
+| USDZ | vertex colors | AR on Apple devices |
+| FBX | vertex colors | DCC tools (Blender, Maya, Unity) |
+| OBJ | geometry only | simple mesh interchange |
+| STL | geometry only | 3D printing |
+
+> OBJ and STL carry geometry only (a limitation of the underlying Three.js exporters) â€” use GLB / glTF / PLY / USDZ / FBX when you need vertex colors.
 
 ## Tech Stack
 

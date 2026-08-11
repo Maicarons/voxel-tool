@@ -219,6 +219,25 @@ body {
   background: rgba(59, 130, 246, 0.18);
 }
 
+.export-select {
+  font-size: 13px;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.12s ease;
+}
+.export-select:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+.export-select:hover {
+  background: #2c2c36;
+  border-color: #3a3a46;
+}
+
 .seg {
   display: inline-flex;
   border: 1px solid var(--border);

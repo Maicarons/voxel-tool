@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { VoxelEditor, type EditMode, type EditorStats } from './editor';
+import { VoxelEditor, type EditMode, type EditorStats, type VoxelFormat } from './editor';
 import { defaultPalette } from '@voxel-tool/core';
 import Toolbar from './components/Toolbar';
 import PalettePanel from './components/PalettePanel';
@@ -69,6 +69,10 @@ export default function App() {
     setShowGrid(v);
     editorRef.current?.setShowGrid(v);
   };
+  const onExportModel = (format: VoxelFormat) =>
+    editorRef.current
+      ?.exportModel(format, fileName.replace(/\.vox$/i, '') || 'model')
+      .catch((err) => alert('导出失败: ' + (err as Error).message));
 
   return (
     <div className="app">
@@ -94,6 +98,7 @@ export default function App() {
           onOpenClick={() => fileInputRef.current?.click()}
           onSave={onSave}
           onExportPng={onExportPng}
+          onExportModel={onExportModel}
           onUndo={onUndo}
           canUndo={canUndo}
           onClear={onClear}

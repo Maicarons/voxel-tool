@@ -7,6 +7,11 @@ import {
   downloadVox,
   defaultPalette,
 } from '@voxel-tool/core';
+import { VoxelExporter } from '@voxel-tool/exporter';
+import type { VoxelFormat } from '@voxel-tool/exporter';
+
+// 重新导出供 UI 层 (Toolbar / App) 引用, 避免重复 import 第三方包
+export type { VoxelFormat } from '@voxel-tool/exporter';
 
 export type EditMode = 'paint' | 'erase';
 
@@ -227,6 +232,20 @@ export class VoxelEditor {
     a.href = url;
     a.download = filename;
     a.click();
+  }
+
+  /**
+   * 把当前体素模型导出为通用 3D 格式并触发浏览器下载。
+   * 走 @voxel-tool/exporter: 纯数据 (体素 + 调色板) 喂给导出器, 由其构建 y-up 几何并调度各格式。
+   * @param {VoxelFormat} format 'glb'|'gltf'|'obj'|'stl'|'ply'|'usdz'|'fbx'
+   * @param {string} [filename] 文件名主体 (不含扩展名); 默认 'model'
+   */
+  async exportModel(format: VoxelFormat, filename = 'model') {
+    const exporter = new VoxelExporter({
+      model: { size: [this.grid.sx, this.grid.sy, this.grid.sz], voxels: this.grid.list() },
+      palette: this.palette,
+    });
+    await exporter.download(format, { filename: `${filename}.${format}` });
   }
 
   dispose() {

@@ -28,6 +28,7 @@ hero:
 
 - **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 文件读写、调色板工具、`VoxelGrid` 体素容器。
 - **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用它。
+- **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX。
 - **`@voxel-tool/react`** — React 3D 查看器组件（基于 Three.js）。
 - **`@voxel-tool/vue`** — Vue 3 3D 查看器组件（同一套渲染原理）。
 - **`@voxel-tool/solid`** — SolidJS 3D 查看器组件。

@@ -1,4 +1,15 @@
-import type { EditMode } from '../editor';
+import { useState } from 'react';
+import type { EditMode, VoxelFormat } from '../editor';
+
+const FORMAT_OPTIONS: { value: VoxelFormat; label: string }[] = [
+  { value: 'glb', label: 'GLB' },
+  { value: 'gltf', label: 'glTF' },
+  { value: 'obj', label: 'OBJ' },
+  { value: 'stl', label: 'STL' },
+  { value: 'ply', label: 'PLY' },
+  { value: 'usdz', label: 'USDZ' },
+  { value: 'fbx', label: 'FBX' },
+];
 
 interface Props {
   mode: EditMode;
@@ -7,6 +18,7 @@ interface Props {
   onOpenClick: () => void;
   onSave: () => void;
   onExportPng: () => void;
+  onExportModel: (format: VoxelFormat) => void;
   onUndo: () => void;
   canUndo: boolean;
   onClear: () => void;
@@ -22,6 +34,7 @@ export default function Toolbar({
   onOpenClick,
   onSave,
   onExportPng,
+  onExportModel,
   onUndo,
   canUndo,
   onClear,
@@ -29,6 +42,8 @@ export default function Toolbar({
   onToggleGrid,
   fileName,
 }: Props) {
+  const [exportFmt, setExportFmt] = useState<VoxelFormat>('glb');
+
   return (
     <div className="toolbar">
       <div className="tool-group">
@@ -43,6 +58,25 @@ export default function Toolbar({
         </button>
         <button className="btn" onClick={onExportPng} title="导出当前视角为 PNG">
           导出 PNG
+        </button>
+        <select
+          className="export-select"
+          value={exportFmt}
+          onChange={(e) => setExportFmt(e.target.value as VoxelFormat)}
+          title="选择导出格式"
+        >
+          {FORMAT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn"
+          onClick={() => onExportModel(exportFmt)}
+          title="把当前体素模型导出为通用 3D 格式并下载"
+        >
+          导出模型
         </button>
       </div>
 

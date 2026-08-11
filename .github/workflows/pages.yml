@@ -43,10 +43,13 @@ jobs:
       - name: Build documentation
         run: npm run docs:build
 
-      # editor 依赖的 workspace 包 @voxel-tool/core 以 dist/ 暴露入口，
+      # editor 依赖的 workspace 包 @voxel-tool/core / @voxel-tool/exporter 以 dist/ 暴露入口，
       # 干净环境（npm ci）下 dist 不存在，必须先构建，否则 vite 解析入口失败。
       - name: Build workspace dependency (@voxel-tool/core)
         run: npm run build -w @voxel-tool/core
+
+      - name: Build workspace dependency (@voxel-tool/exporter)
+        run: npm run build -w @voxel-tool/exporter
 
       - name: Build voxel editor
         run: npm run build:editor

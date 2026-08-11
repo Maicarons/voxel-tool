@@ -191,3 +191,23 @@ export const App = component$(() => {
 > 别忘了在宿主项目的 Vite 配置启用 `@builder.io/qwik/vite` 优化器。
 
 更多属性见 [组件示例](/zh/components/react-viewer)。
+
+## 3. 导出为 3D 格式
+
+`@voxel-tool/exporter` 能把已解析的模型（或原始体素数据）导出为 **GLB / glTF / OBJ / STL / PLY / USDZ / FBX**。
+
+```js
+import { VoxelExporter } from '@voxel-tool/exporter';
+import { parseVox } from '@voxel-tool/core';
+
+const { models, palette } = parseVox(bytes);
+const exporter = new VoxelExporter({ model: models[0], palette });
+
+// 获取字节（根据格式返回 ArrayBuffer / string / Uint8Array）
+const glb = await exporter.export('glb');
+
+// 或在浏览器中直接下载
+await exporter.download('fbx', { filename: 'my-model.fbx' });
+```
+
+GLB / glTF / PLY / USDZ / FBX 保留顶点色；OBJ 与 STL 仅含几何。完整格式列表与选项见 [导出库 API](/zh/api/exporter)。

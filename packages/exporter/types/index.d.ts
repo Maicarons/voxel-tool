@@ -2,7 +2,22 @@
 // 本包以 JS 实现, 此 .d.ts 手写以对外提供类型。
 // 复用 @voxel-tool/core 的 RGBA / Material 类型, 保证与 parseVox 返回结构一致。
 import type * as THREE from 'three';
-import type { RGBA, Material } from '@voxel-tool/core';
+
+/** 调色板单项: [r, g, b, a] (0..255)。与 @voxel-tool/core 的 RGBA 同形, 这里自包含定义,
+ *  避免消费端（如 editor）因 package 入口的类型导出解析差异而报 “no exported member”。 */
+export type RGBA = [number, number, number, number];
+
+/** MATL 材质 (来自 @voxel-tool/core parseVox, 仅含文件实际存在的字段)。
+ *  自包含定义, 不依赖 core 的类型导出。是 core.Material 的结构子集, 因此可直接传入
+ *  parseVox 返回的 materials (Record<number, core.Material>)。 */
+export interface Material {
+  type?: string;
+  metalness?: number;
+  roughness?: number;
+  alpha?: number;
+  emissive?: number;
+  ior?: number;
+}
 
 /** 支持的导出格式 */
 export type VoxelFormat = 'glb' | 'gltf' | 'obj' | 'stl' | 'ply' | 'usdz' | 'fbx';
@@ -42,7 +57,7 @@ export interface VoxelExportInput {
   instances?: VoxelInstance[];
   model?: VoxelModel | null;
   /** 256 项 [r,g,b,a] (0..255); 来自 parseVox 时可能为 null, 缺省用 defaultPalette() */
-  palette?: RGBA[] | null;
+  palette?: number[][] | null;
   materials?: Record<number, Material>;
 }
 

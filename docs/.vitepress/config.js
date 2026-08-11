@@ -32,6 +32,7 @@ export default defineConfig({
             items: [
               { text: '@voxel-tool/core', link: '/api/core' },
               { text: '@voxel-tool/viewer', link: '/api/viewer' },
+              { text: '@voxel-tool/exporter', link: '/api/exporter' },
               { text: '@voxel-tool/react', link: '/api/react' },
               { text: '@voxel-tool/vue', link: '/api/vue' },
               { text: '@voxel-tool/solid', link: '/api/solid' },
@@ -88,6 +89,7 @@ export default defineConfig({
             items: [
               { text: '@voxel-tool/core', link: '/zh/api/core' },
               { text: '@voxel-tool/viewer', link: '/zh/api/viewer' },
+              { text: '@voxel-tool/exporter', link: '/zh/api/exporter' },
               { text: '@voxel-tool/react', link: '/zh/api/react' },
               { text: '@voxel-tool/vue', link: '/zh/api/vue' },
               { text: '@voxel-tool/solid', link: '/zh/api/solid' },

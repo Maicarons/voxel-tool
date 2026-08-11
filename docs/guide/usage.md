@@ -191,3 +191,23 @@ export const App = component$(() => {
 > Don't forget to enable the `@builder.io/qwik/vite` optimizer in your host project's Vite config.
 
 See [Component Examples](/components/react-viewer) for more props.
+
+## 3. Export to 3D formats
+
+`@voxel-tool/exporter` turns a parsed model — or raw voxel data — into **GLB / glTF / OBJ / STL / PLY / USDZ / FBX**.
+
+```js
+import { VoxelExporter } from '@voxel-tool/exporter';
+import { parseVox } from '@voxel-tool/core';
+
+const { models, palette } = parseVox(bytes);
+const exporter = new VoxelExporter({ model: models[0], palette });
+
+// Get the bytes (ArrayBuffer / string / Uint8Array depending on format)
+const glb = await exporter.export('glb');
+
+// Or download directly in the browser
+await exporter.download('fbx', { filename: 'my-model.fbx' });
+```
+
+GLB / glTF / PLY / USDZ / FBX preserve vertex colors; OBJ and STL carry geometry only. See the [Exporter API](/api/exporter) for the full format list and options.

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@voxel-tool/core": "*",
+    "@voxel-tool/exporter": "*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.160.1"

@@ -28,6 +28,7 @@ hero:
 
 - **`@voxel-tool/core`** — Pure-JS core: `.vox` read/write, palette helpers, and the `VoxelGrid` container.
 - **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses it.
+- **`@voxel-tool/exporter`** — Standalone export library: voxel models → GLB / glTF / OBJ / STL / PLY / USDZ / FBX.
 - **`@voxel-tool/react`** — React 3D viewer component (Three.js).
 - **`@voxel-tool/vue`** — Vue 3 3D viewer component (same rendering approach).
 - **`@voxel-tool/solid`** — SolidJS 3D viewer component.
