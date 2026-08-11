@@ -26,6 +26,9 @@
     "@comfyorg/fbx-exporter-three": "^1.0.1",
     "three": "^0.184.0"
   },
+  "devDependencies": {
+    "vite": "^7.0.0"
+  },
   "keywords": [
     "vox",
     "magicavoxel",

@@ -4,6 +4,12 @@ name: Publish to npm
 # 由 actions/setup-node 写入 .npmrc 供 npm publish 使用。无需在代码里硬编码令牌。
 # 仍保留 --provenance 供应链溯源（依赖 id-token: write 的 OIDC）。
 # 触发: 打 GitHub Release 自动发布；或在 Actions 页面手动 Run workflow。
+#
+# 版本策略 (Changesets):
+#   - 开发时通过 `npx changeset add` 累积待发布说明；
+#   - 本工作流在发布前先 `npx changeset version` 消费这些说明、bump 相关包版本、
+#     生成 CHANGELOG 并刷新 package-lock，再把版本 bump 提交回 main（best-effort）；
+#   - 若没有待发布 changeset，则直接按 main 上现有版本发布（幂等，已发布的会跳过）。
 on:
   release:
     types: [published]
@@ -11,8 +17,9 @@ on:
   workflow_dispatch:
 
 # id-token: write 仍保留，供 --provenance 供应链溯源使用。
+# contents: write 供把版本 bump 提交回 main。
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -34,6 +41,28 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # 消费待发布 changeset：bump 版本 + 生成 CHANGELOG + 刷新 lock，
+      # 再把结果提交回 main（best-effort，遇分支保护等失败时不影响后续发布）。
+      - name: Consume changesets & bump versions
+        run: |
+          shopt -s nullglob
+          cs=(.changeset/*.md)
+          has=0
+          for f in "${cs[@]}"; do
+            [ "$(basename "$f")" != "README.md" ] && has=1 && break
+          done
+          if [ "$has" = "1" ]; then
+            echo "pending changesets found -> bumping versions"
+            npx changeset version
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Version Packages" || echo "nothing to commit"
+            git push origin "HEAD:refs/heads/main" || echo "push skipped (branch protection?)"
+          else
+            echo "no pending changesets -> publishing current versions as-is"
+          fi
 
       - name: Build all packages
         run: npm run build

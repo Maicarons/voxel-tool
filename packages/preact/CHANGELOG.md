@@ -1,5 +1,11 @@
 # @voxel-tool/preact
 
+## 0.3.0
+
+### Minor Changes
+
+- Add TypeScript type declarations (`types/index.d.ts`) for all framework viewer components, so TypeScript consumers now get full prop typing (`src`/`model`/`palette`/`background` and `width`+`height` or `size`). No runtime behavior change.
+
 ## 0.2.0
 
 ### Minor Changes
