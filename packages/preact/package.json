@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/preact",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Preact 3D viewer component for MagicaVoxel .vox models (built on @voxel-tool/viewer + Three.js)",
   "type": "module",
   "main": "dist/index.js",
@@ -31,9 +31,9 @@
     "@voxel-tool/viewer": "^0.2.0"
   },
   "devDependencies": {
-    "@preact/preset-vite": "^2.9.3",
+    "@preact/preset-vite": "^2.10.6",
     "preact": "^10.25.4",
-    "vite": "^5.4.11"
+    "vite": "^7.0.0"
   },
   "keywords": [
     "vox",

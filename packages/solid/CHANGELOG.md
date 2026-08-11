@@ -1,5 +1,22 @@
 # @voxel-tool/solid
 
+## 0.4.0
+
+### Minor Changes
+
+- Upgrade the build toolchain from Vite 5.4 to Vite 7.
+
+  - Bump each framework package's `vite` devDependency to `^7.0.0` and its build plugin to a Vite 7-compatible release:
+    - `@vitejs/plugin-react` `^5.2.0`
+    - `@vitejs/plugin-vue` `^6.0.8`
+    - `vite-plugin-solid` `^2.11.14`
+    - `@preact/preset-vite` `^2.10.6`
+    - `@sveltejs/vite-plugin-svelte` `^6.2.4`
+    - `@builder.io/qwik` `^1.20.0`
+  - Bump the editor app (`voxel-tool-editor`) to `vite` `^7.0.0` and `@vitejs/plugin-react` `^5.2.0`.
+  - VitePress keeps its own isolated Vite 5 stack (nested under `vitepress/`), so its `@vitejs/plugin-vue@5` peer range is still satisfied.
+  - No runtime/API changes — this is a build-tooling modernization only.
+
 ## 0.3.0
 
 ### Minor Changes
