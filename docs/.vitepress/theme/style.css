@@ -1,0 +1,15 @@
+/* 编辑器内嵌页：让 iframe 铺满文档内容区（去掉 .vp-doc 的窄栏 padding 与最大宽度）。
+   依赖 :has() 选择器（Chrome/Edge/Safari/Firefox 2023+ 均支持）。 */
+.vp-doc:has(> .editor-embed) {
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+
+.editor-embed {
+  display: block;
+  width: 100%;
+  height: calc(100vh - var(--vp-nav-height, 64px));
+  border: 0;
+  background: var(--vp-c-bg, #fff);
+}

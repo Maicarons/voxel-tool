@@ -5,7 +5,9 @@ on:
     branches: [main]
     paths:
       - 'docs/**'
+      - 'apps/**'
       - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/pages.yml'
   workflow_dispatch:
 
@@ -40,6 +42,15 @@ jobs:
 
       - name: Build documentation
         run: npm run docs:build
+
+      - name: Build voxel editor
+        run: npm run build:editor
+
+      # 将编辑器构建产物作为子路径 /voxel-tool/editor/ 嵌入文档站
+      - name: Embed editor into docs
+        run: |
+          rm -rf docs/.vitepress/dist/editor
+          cp -r apps/vox-editor/dist docs/.vitepress/dist/editor
 
       - name: Setup Pages
         uses: actions/configure-pages@v6

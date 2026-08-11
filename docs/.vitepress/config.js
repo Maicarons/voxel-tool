@@ -15,6 +15,7 @@ export default defineConfig({
           { text: 'Guide', link: '/guide/installation' },
           { text: 'API', link: '/api/core' },
           { text: 'Components', link: '/components/react-viewer' },
+          { text: 'Editor', link: '/editor' },
           { text: 'GitHub', link: 'https://github.com/Maicarons/voxel-tool' },
         ],
         sidebar: [
@@ -50,6 +51,12 @@ export default defineConfig({
               { text: 'Qwik · VoxViewer', link: '/components/qwik-viewer' },
             ],
           },
+          {
+            text: 'Try it',
+            items: [
+              { text: 'Voxel Editor', link: '/editor' },
+            ],
+          },
         ],
       },
     },
@@ -64,6 +71,7 @@ export default defineConfig({
           { text: '指南', link: '/zh/guide/installation' },
           { text: 'API', link: '/zh/api/core' },
           { text: '组件', link: '/zh/components/react-viewer' },
+          { text: '编辑器', link: '/zh/editor' },
           { text: 'GitHub', link: 'https://github.com/Maicarons/voxel-tool' },
         ],
         sidebar: [
@@ -97,6 +105,12 @@ export default defineConfig({
               { text: 'Preact · VoxViewer', link: '/zh/components/preact-viewer' },
               { text: 'Svelte · VoxViewer', link: '/zh/components/svelte-viewer' },
               { text: 'Qwik · VoxViewer', link: '/zh/components/qwik-viewer' },
+            ],
+          },
+          {
+            text: '在线体验',
+            items: [
+              { text: '体素编辑器', link: '/zh/editor' },
             ],
           },
         ],

@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// 独立编辑器项目：默认部署在站点根路径，无需 sub-path base。
+// 编辑器随文档站一起部署在 GitHub Pages 子路径下：
+// https://maicarons.github.io/voxel-tool/editor/
 export default defineConfig({
+  base: '/voxel-tool/editor/',
   plugins: [react()],
   server: {
     port: 5180,
