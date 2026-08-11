@@ -38,31 +38,29 @@ jobs:
       - name: Build all packages
         run: npm run build
 
-      # 顺序: 先发 core, 再发它依赖的 viewer, 最后发依赖 viewer 的各框架组件
-      # --provenance 生成供应链溯源证明 (需 OIDC, 与可信发布天然契合)
-      - name: Publish @voxel-tool/core
-        run: npm publish -w @voxel-tool/core --provenance --access public
-
-      - name: Publish @voxel-tool/exporter
-        run: npm publish -w @voxel-tool/exporter --provenance --access public
-
-      - name: Publish @voxel-tool/viewer
-        run: npm publish -w @voxel-tool/viewer --provenance --access public
-
-      - name: Publish @voxel-tool/react
-        run: npm publish -w @voxel-tool/react --provenance --access public
-
-      - name: Publish @voxel-tool/vue
-        run: npm publish -w @voxel-tool/vue --provenance --access public
-
-      - name: Publish @voxel-tool/solid
-        run: npm publish -w @voxel-tool/solid --provenance --access public
-
-      - name: Publish @voxel-tool/preact
-        run: npm publish -w @voxel-tool/preact --provenance --access public
-
-      - name: Publish @voxel-tool/svelte
-        run: npm publish -w @voxel-tool/svelte --provenance --access public
-
-      - name: Publish @voxel-tool/qwik
-        run: npm publish -w @voxel-tool/qwik --provenance --access public
+      # 顺序: 先发 core, 再发它依赖的 viewer, 最后发依赖 viewer 的各框架组件。
+      # --provenance 生成供应链溯源证明 (需 OIDC, 与可信发布天然契合)。
+      # 幂等: 若某包当前版本已在 registry 存在则跳过，避免重跑时遇 409 中断整个 job
+      # (例如 core/viewer 等已发布、只有新增的 exporter 需要发的情况)。
+      - name: Publish all packages (idempotent, dependency order)
+        run: |
+          publish_pkg () {
+            local name="$1" dir="$2"
+            local ver
+            ver=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$ver" version >/dev/null 2>&1; then
+              echo "skip: $name@$ver already published"
+            else
+              echo "publishing $name@$ver"
+              npm publish -w "$name" --provenance --access public
+            fi
+          }
+          publish_pkg @voxel-tool/core      packages/core
+          publish_pkg @voxel-tool/exporter  packages/exporter
+          publish_pkg @voxel-tool/viewer    packages/viewer
+          publish_pkg @voxel-tool/react     packages/react
+          publish_pkg @voxel-tool/vue       packages/vue
+          publish_pkg @voxel-tool/solid     packages/solid
+          publish_pkg @voxel-tool/preact    packages/preact
+          publish_pkg @voxel-tool/svelte    packages/svelte
+          publish_pkg @voxel-tool/qwik      packages/qwik
