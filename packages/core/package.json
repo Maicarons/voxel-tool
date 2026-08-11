@@ -25,5 +25,5 @@
   "bugs": { "url": "https://github.com/Maicarons/voxel-tool/issues" },
   "publishConfig": { "access": "public" },
   "engines": { "node": ">=18" },
-  "devDependencies": { "esbuild": "^0.24.2" }
+  "devDependencies": { "esbuild": "^0.28.1" }
 }
