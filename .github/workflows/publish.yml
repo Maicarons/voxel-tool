@@ -6,8 +6,10 @@ name: Publish to npm
 on:
   release:
     types: [published]
+  # 允许手动触发（例如改了认证方式后重跑，无需重建 Release）
+  workflow_dispatch:
 
-# id-token: write 供 npm Trusted Publishing (OIDC) 使用; 不要设置 NODE_AUTH_TOKEN。
+# id-token: write 仍保留，供 --provenance 供应链溯源使用。
 permissions:
   contents: read
   id-token: write
@@ -15,6 +17,9 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # 发布认证从仓库密钥 NPM_TOKEN (npm Automation token) 读取，注入 NODE_AUTH_TOKEN。
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
