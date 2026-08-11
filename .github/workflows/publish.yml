@@ -1,8 +1,9 @@
 name: Publish to npm
 
-# 现代做法: 通过 GitHub OIDC 的 npm Trusted Publishing 发布, 无需在仓库存储任何令牌。
-# 前置: 在 npmjs.com 每个包的 Settings -> Publishing access 添加 Trusted Publisher
-#       (GitHub 仓库 Maicarons/voxel-tool, 工作流 publish.yml)。
+# 发布认证: 通过仓库密钥 NPM_TOKEN (npm Automation token) 注入 NODE_AUTH_TOKEN，
+# 由 actions/setup-node 写入 .npmrc 供 npm publish 使用。无需在代码里硬编码令牌。
+# 仍保留 --provenance 供应链溯源（依赖 id-token: write 的 OIDC）。
+# 触发: 打 GitHub Release 自动发布；或在 Actions 页面手动 Run workflow。
 on:
   release:
     types: [published]
