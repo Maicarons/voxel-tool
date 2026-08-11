@@ -6,6 +6,7 @@ import {
   rainbowPalette,
 } from '@voxel-tool/core';
 import { createVoxelViewer, buildVoxelGeometry, makeMaterial } from '@voxel-tool/viewer';
+import { VoxelExporter, buildExportObject, exportModel, FORMATS } from '@voxel-tool/exporter';
 import type * as THREE from 'three';
 
 const grid = new VoxelGrid(8, 8, 8);
@@ -37,4 +38,12 @@ function useViewer(el: HTMLElement) {
 const geo = buildVoxelGeometry(info.models[0].voxels, info.palette);
 const mat: THREE.Material = makeMaterial(0, info.materials);
 
-console.log(scene.length, Object.keys(mats).length, rot.length, geo.attributes.position.count, mat.type);
+// @voxel-tool/exporter 消费端类型校验 (验证 .d.ts 可解析)
+const exporter = new VoxelExporter(info);
+const built: THREE.Group = exporter.build();
+const exportPromise = exporter.export('glb'); // Promise<string | ArrayBuffer | Uint8Array | DataView>
+const obj: THREE.Group = buildExportObject({ model: info.models[0], palette: info.palette });
+const fmt: string[] = FORMATS;
+void exportModel; void built; void obj; void fmt; void exportPromise;
+
+console.log(scene.length, Object.keys(mats).length, rot.length, geo.attributes.position.count, mat.type, FORMATS.length);

@@ -43,6 +43,9 @@ jobs:
       - name: Publish @voxel-tool/core
         run: npm publish -w @voxel-tool/core --provenance --access public
 
+      - name: Publish @voxel-tool/exporter
+        run: npm publish -w @voxel-tool/exporter --provenance --access public
+
       - name: Publish @voxel-tool/viewer
         run: npm publish -w @voxel-tool/viewer --provenance --access public
 
