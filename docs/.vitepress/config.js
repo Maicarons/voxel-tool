@@ -15,7 +15,7 @@ export default defineConfig({
           { text: 'Guide', link: '/guide/installation' },
           { text: 'API', link: '/api/core' },
           { text: 'Components', link: '/components/react-viewer' },
-          { text: 'Editor', link: '/editor' },
+          { text: 'Editor', link: '/editor/' },
           { text: 'GitHub', link: 'https://github.com/Maicarons/voxel-tool' },
         ],
         sidebar: [
@@ -54,7 +54,7 @@ export default defineConfig({
           {
             text: 'Try it',
             items: [
-              { text: 'Voxel Editor', link: '/editor' },
+              { text: 'Voxel Editor', link: '/editor/' },
             ],
           },
         ],
@@ -71,7 +71,7 @@ export default defineConfig({
           { text: '指南', link: '/zh/guide/installation' },
           { text: 'API', link: '/zh/api/core' },
           { text: '组件', link: '/zh/components/react-viewer' },
-          { text: '编辑器', link: '/zh/editor' },
+          { text: '编辑器', link: '/editor/' },
           { text: 'GitHub', link: 'https://github.com/Maicarons/voxel-tool' },
         ],
         sidebar: [
@@ -110,7 +110,7 @@ export default defineConfig({
           {
             text: '在线体验',
             items: [
-              { text: '体素编辑器', link: '/zh/editor' },
+              { text: '体素编辑器', link: '/editor/' },
             ],
           },
         ],
