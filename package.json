@@ -10,7 +10,7 @@
     "apps/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @voxel-tool/core --if-present && npm run build -w @voxel-tool/mesh --if-present && npm run build -w @voxel-tool/viewer --if-present && npm run build -w @voxel-tool/exporter --if-present && npm run build -w @voxel-tool/react --if-present && npm run build -w @voxel-tool/vue --if-present && npm run build -w @voxel-tool/solid --if-present && npm run build -w @voxel-tool/preact --if-present && npm run build -w @voxel-tool/svelte --if-present && npm run build -w @voxel-tool/qwik --if-present && npm run build -w voxel-tool-docs --if-present && npm run build -w voxel-tool-editor --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "tsc --noEmit",
     "dev:react": "npm run dev -w @voxel-tool/react",
