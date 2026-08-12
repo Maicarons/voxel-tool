@@ -194,7 +194,7 @@ export const App = component$(() => {
 
 ## 3. 导出为 3D 格式
 
-`@voxel-tool/exporter` 能把已解析的模型（或原始体素数据）导出为 **GLB / glTF / OBJ / STL / PLY / USDZ / FBX**。
+`@voxel-tool/exporter` 能把已解析的模型（或原始体素数据）导出为 **GLB / glTF / OBJ / STL / PLY / USDZ / FBX**，并支持写回 **`.vox`** 无损往返。
 
 ```js
 import { VoxelExporter } from '@voxel-tool/exporter';
@@ -211,3 +211,29 @@ await exporter.download('fbx', { filename: 'my-model.fbx' });
 ```
 
 GLB / glTF / PLY / USDZ / FBX 保留顶点色；OBJ 与 STL 仅含几何。完整格式列表与选项见 [导出库 API](/zh/api/exporter)。
+
+### 导出带动画的模型（glTF / GLB 动画）
+
+若 `.vox` 包含 MagicaVoxel 帧动画，传入完整 `parseVox` 结果，导出器会把运动烘焙成 glTF / GLB 里的真实动画片段：
+
+```js
+import { VoxelExporter } from '@voxel-tool/exporter';
+import { parseVox } from '@voxel-tool/core';
+
+const { models, scene, palette, frameCount } = parseVox(bytes);
+const exporter = new VoxelExporter({ models, scene, palette, frameCount });
+
+const glb = await exporter.export('glb');   // 动画已烘焙
+```
+
+### 无损往返回 `.vox`
+
+`export('vox')` 把数据（场景图、材质、动画）直接写回 MagicaVoxel `.vox`，无损：
+
+```js
+import { VoxelExporter } from '@voxel-tool/exporter';
+import { parseVox } from '@voxel-tool/core';
+
+const parsed = parseVox(bytes);
+const voxBytes = await new VoxelExporter(parsed).export('vox'); // 重新编码回原始文件
+```

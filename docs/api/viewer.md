@@ -17,13 +17,17 @@ Mounts a real-3D voxel viewer inside a container element and returns a controlle
 | `container` | `HTMLElement` | — | The target DOM element (must have a width and height) |
 | `options.src` | `ArrayBuffer \| Uint8Array` | `null` | `.vox` binary; when provided, `parseVox` is called internally |
 | `options.model` | `{ size, voxels }` | `null` | A parsed model (from `parseVox`'s `models[0]`) |
-| `options.instances` | `Array<Instance>` | `null` | A multi-instance scene (from `parseVox`'s `scene`): each `{ voxels, translation?, rotation?, hidden?, name? }` is placed in world space. Use this instead of `model` for multi-model `.vox` files. |
+| `options.instances` | `Array<Instance>` | `null` | A multi-instance scene (from `parseVox`'s `scene`): each `{ voxels, translation?, rotation?, hidden?, name?, frames? }` is placed in world space. `frames` is an optional per-frame world transform (`[{ translation, rotation }]`) — when present the viewer enables **animation playback**. Use this instead of `model` for multi-model `.vox` files. |
 | `options.palette` | `Array<[r,g,b,a]>` | `null` | A 256-entry palette; pairs with `model` / `instances` |
 | `options.materials` | `Record<number, Material>` | `null` | MATL materials (from `parseVox`'s `materials`); voxels whose color index maps to a material render with `MeshStandardMaterial` (metalness / roughness / alpha / emissive) instead of the default `MeshLambertMaterial` |
 | `options.background` | `string` | `'#16181e'` | Canvas background color |
 | `options.width` | `number` | `480` | Initial width (px) |
 | `options.height` | `number` | `480` | Initial height (px) |
+| `options.renderer` | `'webgl' \| 'webgpu'` | `'webgl'` | Rendering backend. `webgpu` loads Three's `WebGPURenderer` on demand and **falls back to WebGL automatically** if the browser lacks WebGPU support; default `webgl` path is unchanged. |
+| `options.frameRate` | `number` | `12` | Animation playback rate in fps (used when `instances` carry `frames`). |
+| `options.loop` | `boolean` | `true` | Whether animation playback loops. |
 | `options.onInfo` | `(info: [number, number] \| null) => void` | `null` | Called after rebuild; argument is `[voxelCount, faceCount]` |
+| `options.onFrame` | `(frame: number) => void` | `null` | Called on every animation frame change; argument is the current frame index |
 
 > Provide either `src` / `model` (single model) **or** `instances` (multi-model scene); `instances` takes precedence when both are given.
 > Must be called in a browser environment (depends on `window` / WebGL); throws under SSR.
@@ -34,6 +38,14 @@ Mounts a real-3D voxel viewer inside a container element and returns a controlle
 |---|---|
 | `update(input?)` | Rebuild the mesh after data changes: `update({ src?, model?, instances?, palette?, materials? })` |
 | `setBackground(color)` | Change the canvas background color |
+| `play()` | Start animation playback (only effective when `frameCount > 1`) |
+| `pause()` | Pause playback (keeps the current frame) |
+| `stop()` | Stop and rewind to frame 0 |
+| `setFrame(i)` | Jump to a specific frame (also pauses) |
+| `setLoop(b)` | Toggle looping on/off |
+| `setFrameRate(rate)` | Set playback fps |
+| `isPlaying()` | `boolean` — whether playback is active |
+| `getFrameCount()` | `number` — total frames of the loaded scene (1 for static) |
 | `dispose()` | Tear down: cancel animation frames, disconnect the ResizeObserver, release GPU resources |
 
 ### Minimal example (no framework, single model)
@@ -73,6 +85,45 @@ const viewer = createVoxelViewer(el, {
   materials,              // metallic / glass / emissive voxels render correctly
 });
 ```
+
+### Animation playback
+
+When your `instances` carry `frames` (the per-frame world transforms returned by `parseVox` for animated `.vox` files), the viewer exposes a small playback API:
+
+```js
+import { createVoxelViewer } from '@voxel-tool/viewer';
+import { parseVox } from '@voxel-tool/core';
+
+const buf = await fetch('/anim.vox').then((r) => r.arrayBuffer());
+const { palette, scene } = parseVox(buf); // scene instances include `frames` (frameCount > 1)
+
+const viewer = createVoxelViewer(el, {
+  instances: scene,
+  palette,
+  frameRate: 24,   // fps
+  loop: true,
+  onFrame: (f) => console.log('frame', f),
+});
+
+viewer.play();            // start
+// viewer.pause();        // hold current frame
+// viewer.setFrame(3);    // jump (also pauses)
+// viewer.setLoop(false); // play once, then stop
+// viewer.stop();         // rewind to 0
+// viewer.getFrameCount(); // -> total frames
+```
+
+Each animated instance is moved by swapping its local matrix per frame (using its precomputed `frames` transforms), so playback is cheap — no geometry is rebuilt.
+
+### Rendering backend (WebGPU)
+
+By default the viewer uses a WebGL renderer. Pass `renderer: 'webgpu'` to opt into Three's `WebGPURenderer`:
+
+```js
+const viewer = createVoxelViewer(el, { model, palette, renderer: 'webgpu' });
+```
+
+The WebGPU backend is loaded on demand (`import('three/webgpu')`) and **falls back to WebGL automatically** if the browser/device doesn't support WebGPU. The default `webgl` path is completely unchanged, and the WebGPU code is split into its own chunk so it isn't downloaded unless requested.
 
 ## `buildVoxelGeometry(voxels, palette)`
 
@@ -121,10 +172,31 @@ Returns a Three.js material for a given material id:
 - `materialId === 0` (or no entry): `MeshLambertMaterial` (default, vertex-colored).
 - otherwise: `MeshStandardMaterial` with `metalness` / `roughness` / `alpha` (→ `transparent` + `opacity`) / `emissive` derived from `materials[materialId]`.
 
+## Greedy meshing (performance)
+
+The viewer builds geometry with **greedy meshing** (in addition to face culling). Coplanar, same-colored, adjacent voxel faces are merged into large quads, collapsing the triangle count by **1–3 orders of magnitude** for solid / slab models — a 48³ solid block drops from 27 648 triangles to **12**, while sparse clouds (few shared faces) barely change. This keeps even very large models rendering instantly.
+
+Two greedy variants of the pure geometry helpers are exported (same signatures as the non-greedy versions):
+
+| Function | Description |
+|---|---|
+| `buildVoxelGeometryGreedy(voxels, palette)` | Same as `buildVoxelGeometry` but merges coplanar same-color faces into larger quads |
+| `buildVoxelBucketsGreedy(voxels, palette, materials?)` | Same as `buildVoxelBuckets` but greedy-merged per bucket |
+
+```js
+import * as THREE from 'three';
+import { buildVoxelGeometryGreedy } from '@voxel-tool/viewer';
+
+const geo = buildVoxelGeometryGreedy(model.voxels, palette); // far fewer triangles than buildVoxelGeometry
+const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+```
+
+> Greedy meshing is on by default inside `createVoxelViewer`; the explicit `*Greedy` functions are for when you drive Three.js yourself.
+
 ## Rendering principle
 
 - Every voxel is a real 3D cube, correctly occluded by the WebGL **depth buffer** (no sorting artifacts for concave shapes or adjacency).
-- **Face culling**: only faces exposed to air are generated — a 14582-voxel model measured only 6098 faces.
+- **Face culling + greedy meshing**: only air-exposed faces are kept, then coplanar same-color runs are merged into big quads — a 14582-voxel model measured only 6098 faces, and solid blocks collapse to a handful of triangles.
 - **Orthographic isometric camera** `OrthographicCamera` at the `(+,+,+)` angle → the classic MagicaVoxel look.
 - `HemisphereLight` + key/fill `DirectionalLight` shade by face normal.
 - `OrbitControls` for free rotate / zoom / pan.

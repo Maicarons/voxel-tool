@@ -7,8 +7,9 @@
 
 A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core library for reading/writing, plus real 3D viewer components built on Three.js — available for **React / Vue / SolidJS / Preact / Svelte / Qwik**.
 
-- 📦 **`@voxel-tool/core`** — Dependency-free core (`.vox` read/write, palettes, voxel grid `VoxelGrid`), runs in Node and the browser with zero runtime dependencies.
-- 🧩 **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses the same rendering implementation.
+- 📦 **`@voxel-tool/core`** — Dependency-free core (`.vox` read/write, palettes, voxel grid `VoxelGrid`), runs in Node and the browser with zero runtime dependencies. Also parses and writes MagicaVoxel **frame animation** (FRAM + nTRN keyframes) losslessly.
+- 🧩 **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses the same rendering implementation. Supports **animation playback** (`play`/`pause`/`setFrame`/…) and an optional **WebGPU** backend (auto-fallback to WebGL).
+- 📤 **`@voxel-tool/exporter`** — Standalone export library: voxel models → GLB / glTF / OBJ / STL / PLY / USDZ / FBX, plus lossless `.vox` round-trip and glTF/GLB **animation baking**.
 - ⚛️ **`@voxel-tool/react`** — React 3D viewer component.
 - 🟢 **`@voxel-tool/vue`** — Vue 3 3D viewer component.
 - 🔵 **`@voxel-tool/solid`** — SolidJS 3D viewer component.
@@ -16,7 +17,7 @@ A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core li
 - 🧡 **`@voxel-tool/svelte`** — Svelte 5 3D viewer component.
 - 💜 **`@voxel-tool/qwik`** — Qwik 3D viewer component.
 
-> The rendering follows mainstream `.vox` viewers (MagicaVoxel / `threejs-vox-loader` / coding.kiwi's *Rendering .vox Files*): every voxel is a real 3D cube correctly occluded by the WebGL depth buffer; only exposed faces are generated (face culling), trimming 6×N faces down to the outer shell so even large models render instantly. All framework components share the single `@voxel-tool/viewer` implementation — no per-framework re-implementation of the renderer.
+> The rendering follows mainstream `.vox` viewers (MagicaVoxel / `threejs-vox-loader` / coding.kiwi's *Rendering .vox Files*): every voxel is a real 3D cube correctly occluded by the WebGL depth buffer; only exposed faces are generated (face culling), and **greedy meshing** merges coplanar same-color faces so even solid models collapse to a handful of triangles and render instantly. All framework components share the single `@voxel-tool/viewer` implementation — no per-framework re-implementation of the renderer.
 
 <p align="center">
   <img src="media/voxel-tool-promo.gif" alt="voxel-tool — 60-second project showcase" width="720"/>

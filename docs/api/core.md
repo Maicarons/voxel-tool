@@ -34,28 +34,29 @@ const bytes = toVoxBytes(grid, palette); // -> Uint8Array
 
 Serializes the grid into `.vox` binary (`MAGIC='VOX '` + version 150 + MAIN/SIZE/XYZI/RGBA chunks).
 
-## `toVoxBytesScene({ models, scene, materials }, palette)`
+## `toVoxBytesScene({ models, scene, materials, frameCount }, palette)`
 
 ```js
-const bytes = toVoxBytesScene({ models, scene, materials }, palette); // -> Uint8Array
+const bytes = toVoxBytesScene({ models, scene, materials, frameCount }, palette); // -> Uint8Array
 ```
 
-Serializes **multi-model + scene-graph + materials** `.vox` (the inverse of `parseVox`'s `scene` / `materials`). Written layout: root `nGRP` → per-instance `nTRN` + `nSHP`, plus one `MATL` chunk per material.
+Serializes **multi-model + scene-graph + materials + animation** `.vox` (the inverse of `parseVox`'s `scene` / `materials` / `frameCount`). Written layout: root `nGRP` → per-instance `nTRN` + `nSHP`, plus one `MATL` chunk per material, and a `FRAM` chunk when the scene is animated.
 
 - `models`: same shape as `parseVox`'s `models`.
-- `scene`: array of instances (`{ name?, hidden?, translation?, rotation?, modelId, voxels? }`). If `voxels` is omitted, it is resolved from `models[modelId]`.
+- `scene`: array of instances (`{ name?, hidden?, translation?, rotation?, modelId, voxels?, frames? }`). If `voxels` is omitted, it is resolved from `models[modelId]`. Animated instances may carry a `frames` array (per-frame `{ translation, rotation }`) — these are re-encoded as the node's `_f` nested-dict keyframes (`_t` / `_r` / `_p`, pivot left at origin since the resolved transforms already include the pivot).
 - `materials`: `Record<number, Material>` as returned by `parseVox`.
+- `frameCount`: total frame count; when `> 1` a `FRAM` chunk is emitted and animated `nTRN` nodes get their keyframe block. Omit (or `1`) for static scenes.
 - `palette`: 256-entry palette.
 
-> Round-trips losslessly with `parseVox` as long as each material only sets fields the file originally contained.
+> Round-trips losslessly with `parseVox`: feed a `parseVox` result straight back into `toVoxBytesScene(input, palette)` to reproduce the original `.vox` (scene graph, materials, animation, and all). Static instances carry no `frames`, so no spurious animation data is added on write.
 
 ## `parseVox(input)`
 
 ```js
-const { version, models, palette, scene, materials } = parseVox(input);
+const { version, models, palette, scene, frameCount, materials } = parseVox(input);
 ```
 
-Parses `.vox` binary — including the **scene graph** (`nTRN` / `nGRP` / `nSHP`) and **materials** (`MATL`).
+Parses `.vox` binary — including the **scene graph** (`nTRN` / `nGRP` / `nSHP`), **materials** (`MATL`), and **animation** (`FRAM` + per-node `nTRN` keyframes).
 
 - `input`: `Uint8Array` / `ArrayBuffer` / Node `Buffer`.
 - Returns:
@@ -69,7 +70,11 @@ Parses `.vox` binary — including the **scene graph** (`nTRN` / `nGRP` / `nSHP`
     - `rotation: number` (0..23 rotation index, `_r`; maps to one of `ROTATION_MATRICES`)
     - `modelId: number` (index into `models`)
     - `voxels: Array<{ x, y, z, i }>` (resolved from `models[modelId]`; convenience for rendering)
+    - `frames?: Array<{ translation: [x, y, z]; rotation: number }>` — **per-frame world transform**. Present only when the file is animated (`frameCount > 1`). Each entry is the fully-resolved transform for that frame (translation + rotation index), pivots already composed in. Feed this to `@voxel-tool/viewer`'s `instances[].frames` for playback, or to `@voxel-tool/exporter` to bake glTF/GLB animations.
+  - `frameCount: number` — total animation frames (from the `FRAM` chunk; `1` for static files).
   - `materials: Record<number, Material>` — keys are MATL ids (1..255). Each material only contains the fields actually present in the file (e.g. `type`, `metalness`, `roughness`, `alpha`, `emissive`, `ior`, …), so a parse → `toVoxBytesScene` round-trip is **byte-identical** when the file uses the same fields.
+
+> **Animation:** MagicaVoxel stores motion as a `FRAM` frame count plus per-`nTRN` keyframes (`_f` nested dict with `_t` translation / `_r` rotation / `_p` pivot strings). `parseVox` recomputes the resolved world transform for every frame of every instance. Static instances keep no `frames` field, so static files round-trip losslessly with zero extra data.
 
 > Index mapping strictly follows the spec: `stream[i]` (i=0..254) → palette index `i+1`; `stream[255]` → index `0`.
 

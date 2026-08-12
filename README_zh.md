@@ -7,8 +7,9 @@
 
 一套用于 **MagicaVoxel `.vox` 文件** 的 JavaScript 工具集：纯 JS 读写核心库 + 基于 Three.js 真实 3D 渲染的查看器组件，覆盖 **React / Vue / SolidJS / Preact / Svelte / Qwik** 六大框架。
 
-- 📦 **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 读写、调色板、体素网格（`VoxelGrid`），Node 与浏览器通用，零运行时依赖。
-- 🧩 **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用同一套渲染实现。
+- 📦 **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 读写、调色板、体素网格（`VoxelGrid`），Node 与浏览器通用，零运行时依赖。还能**无损解析与写回** MagicaVoxel 帧动画（FRAM + nTRN 关键帧）。
+- 🧩 **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用同一套渲染实现。支持**动画播放**（`play`/`pause`/`setFrame`/…）与可选 **WebGPU** 后端（自动回退 WebGL）。
+- 📤 **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX，并支持 `.vox` 无损往返与 glTF/GLB **动画烘焙**。
 - ⚛️ **`@voxel-tool/react`** — React 3D 查看器组件。
 - 🟢 **`@voxel-tool/vue`** — Vue 3 3D 查看器组件。
 - 🔵 **`@voxel-tool/solid`** — SolidJS 3D 查看器组件。
@@ -16,7 +17,7 @@
 - 🧡 **`@voxel-tool/svelte`** — Svelte 5 3D 查看器组件。
 - 💜 **`@voxel-tool/qwik`** — Qwik 3D 查看器组件。
 
-> 渲染原理参考主流 `.vox` viewer（MagicaVoxel / `threejs-vox-loader` / coding.kiwi 的 *Rendering .vox Files*）：每个体素是真实 3D 立方体，靠 WebGL 深度缓冲正确遮挡；只对暴露面生成几何（面剔除），把 6×N 个面砍到外壳，大模型也能秒渲。所有框架组件共享 `@voxel-tool/viewer` 同一份实现，不存在「每个框架重写一遍渲染」的重复代码。
+> 渲染原理参考主流 `.vox` viewer（MagicaVoxel / `threejs-vox-loader` / coding.kiwi 的 *Rendering .vox Files*）：每个体素是真实 3D 立方体，靠 WebGL 深度缓冲正确遮挡；只对暴露面生成几何（面剔除），再用 **greedy meshing** 合并共面同色面，连实心模型都能塌缩成寥寥几个三角形、秒级渲染。所有框架组件共享 `@voxel-tool/viewer` 同一份实现，不存在「每个框架重写一遍渲染」的重复代码。
 
 <p align="center">
   <img src="media/voxel-tool-promo.gif" alt="voxel-tool — 60 秒项目演示" width="720"/>

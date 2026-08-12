@@ -34,28 +34,29 @@ const bytes = toVoxBytes(grid, palette); // -> Uint8Array
 
 把网格序列化为 `.vox` 二进制（`MAGIC='VOX '` + version 150 + MAIN/SIZE/XYZI/RGBA chunk）。
 
-## `toVoxBytesScene({ models, scene, materials }, palette)`
+## `toVoxBytesScene({ models, scene, materials, frameCount }, palette)`
 
 ```js
-const bytes = toVoxBytesScene({ models, scene, materials }, palette); // -> Uint8Array
+const bytes = toVoxBytesScene({ models, scene, materials, frameCount }, palette); // -> Uint8Array
 ```
 
-把 **多模型 + 场景图 + 材质** 序列化为 `.vox`（与 `parseVox` 的 `scene` / `materials` 互逆）。写入结构：根 `nGRP` → 每个实例一个 `nTRN` + `nSHP`，外加每个材质一个 `MATL` chunk。
+把 **多模型 + 场景图 + 材质 + 动画** 序列化为 `.vox`（与 `parseVox` 的 `scene` / `materials` / `frameCount` 互逆）。写入结构：根 `nGRP` → 每个实例一个 `nTRN` + `nSHP`，外加每个材质一个 `MATL` chunk，动画场景还会写 `FRAM` chunk。
 
 - `models`：与 `parseVox` 的 `models` 同形状。
-- `scene`：实例数组（`{ name?, hidden?, translation?, rotation?, modelId, voxels? }`）。若省略 `voxels`，由 `models[modelId]` 解析。
+- `scene`：实例数组（`{ name?, hidden?, translation?, rotation?, modelId, voxels?, frames? }`）。若省略 `voxels`，由 `models[modelId]` 解析。动画实例可带 `frames` 数组（逐帧 `{ translation, rotation }`），会被重新编码为该节点的 `_f` 嵌套字典关键帧（`_t` / `_r` / `_p`，枢轴留原点，因为解算后的变换已包含枢轴）。
 - `materials`：`Record<number, Material>`，即 `parseVox` 返回之物。
+- `frameCount`：总帧数；`> 1` 时写 `FRAM` chunk 并给动画 `nTRN` 节点补关键帧块。静态场景省略（或传 `1`）。
 - `palette`：256 项调色板。
 
-> 只要每个材质只设置文件原本包含的字段，`parseVox` ↔ `toVoxBytesScene` 可无损往返（字节一致）。
+> 与 `parseVox` 无损往返：把 `parseVox` 的结果直接喂回 `toVoxBytesScene(input, palette)`，即可复现原始 `.vox`（场景图、材质、动画全在）。静态实例不带 `frames`，因此写回时不会凭空多出动画数据。
 
 ## `parseVox(input)`
 
 ```js
-const { version, models, palette, scene, materials } = parseVox(input);
+const { version, models, palette, scene, frameCount, materials } = parseVox(input);
 ```
 
-解析 `.vox` 二进制 —— 包括 **场景图**（`nTRN` / `nGRP` / `nSHP`）与 **材质**（`MATL`）。
+解析 `.vox` 二进制 —— 包括 **场景图**（`nTRN` / `nGRP` / `nSHP`）、**材质**（`MATL`）与 **动画**（`FRAM` + 各节点的 `nTRN` 关键帧）。
 
 - `input`：`Uint8Array` / `ArrayBuffer` / Node `Buffer`。
 - 返回：
@@ -69,7 +70,11 @@ const { version, models, palette, scene, materials } = parseVox(input);
     - `rotation: number`（0..23 旋转索引，`_r`；对应 `ROTATION_MATRICES` 之一）
     - `modelId: number`（索引到 `models`）
     - `voxels: Array<{ x, y, z, i }>`（由 `models[modelId]` 解析；便于直接渲染）
+    - `frames?: Array<{ translation: [x, y, z]; rotation: number }>` —— **逐帧世界变换**。仅动画文件（`frameCount > 1`）才存在。每一项都是该帧已完全解算的世界变换（平移 + 旋转索引，枢轴已预先合成）。可喂给 `@voxel-tool/viewer` 的 `instances[].frames` 做播放，或喂给 `@voxel-tool/exporter` 烘焙 glTF/GLB 动画。
+  - `frameCount: number` —— 动画总帧数（来自 `FRAM` chunk；静态文件为 `1`）。
   - `materials: Record<number, Material>` —— 键为 MATL id（1..255）。每个材质只含文件中实际出现的字段（如 `type`、`metalness`、`roughness`、`alpha`、`emissive`、`ior` …），因此解析 → `toVoxBytesScene` 在字段一致时可 **字节级无损往返**。
+
+> **动画**：MagicaVoxel 把运动存为 `FRAM` 总帧数 + 各 `nTRN` 关键帧（`_f` 嵌套字典，含 `_t` 平移 / `_r` 旋转 / `_p` 枢轴字符串）。`parseVox` 会为每实例的每一帧重算已解算的世界变换。静态实例不带 `frames` 字段，因此静态文件往返不会多出任何动画数据。
 
 > 索引映射严格遵循规范：`stream[i]`（i=0..254）→ 调色板索引 `i+1`；`stream[255]` → 索引 `0`。
 

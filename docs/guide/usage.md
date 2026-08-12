@@ -211,3 +211,29 @@ await exporter.download('fbx', { filename: 'my-model.fbx' });
 ```
 
 GLB / glTF / PLY / USDZ / FBX preserve vertex colors; OBJ and STL carry geometry only. See the [Exporter API](/api/exporter) for the full format list and options.
+
+### Export an animated model (glTF / GLB with animation)
+
+If the `.vox` carries MagicaVoxel frame animation, pass the full `parseVox` result and the exporter bakes the motion into the glTF / GLB as real animation clips:
+
+```js
+import { VoxelExporter } from '@voxel-tool/exporter';
+import { parseVox } from '@voxel-tool/core';
+
+const { models, scene, palette, frameCount } = parseVox(bytes);
+const exporter = new VoxelExporter({ models, scene, palette, frameCount });
+
+const glb = await exporter.export('glb');   // animation baked in
+```
+
+### Round-trip back to `.vox`
+
+`export('vox')` writes the data (scene graph, materials, animation) straight back to MagicaVoxel `.vox` — lossless:
+
+```js
+import { VoxelExporter } from '@voxel-tool/exporter';
+import { parseVox } from '@voxel-tool/core';
+
+const parsed = parseVox(bytes);
+const voxBytes = await new VoxelExporter(parsed).export('vox'); // re-encodes the original
+```

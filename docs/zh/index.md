@@ -17,6 +17,10 @@ hero:
       details: '@voxel-tool/core 纯 JS 读写 .vox、调色板与体素网格，Node / 浏览器通用，无运行时依赖。'
     - title: 真 3D 渲染
       details: 每个体素是真实立方体，WebGL 深度缓冲正确遮挡；面剔除把 6×N 个面砍到外壳，大模型也能秒渲。
+    - title: 动画与 .vox 往返
+      details: '核心库解析并无损写回 MagicaVoxel 帧动画（FRAM + nTRN 关键帧）；导出器把运动烘焙成 glTF/GLB 动画片段，并可将任意模型原样写回 .vox。'
+    - title: Greedy 合并 + WebGPU
+      details: 'Greedy meshing 合并共面同色面，把实心模型的三角形数降低 1000× 以上；可选 WebGPU 后端（自动回退 WebGL）按需启用。'
     - title: 六大框架组件
       details: 开箱即用的 <code>VoxViewer</code> 组件，覆盖 React / Vue / Solid / Preact / Svelte / Qwik，拖拽旋转 / 滚轮缩放 / 右键平移。
 
@@ -32,7 +36,7 @@ hero:
 
 - **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 文件读写、调色板工具、`VoxelGrid` 体素容器。
 - **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用它。
-- **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX。
+- **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX，并支持 `.vox` 无损往返与 glTF/GLB 动画烘焙。
 - **`@voxel-tool/react`** — React 3D 查看器组件（基于 Three.js）。
 - **`@voxel-tool/vue`** — Vue 3 3D 查看器组件（同一套渲染原理）。
 - **`@voxel-tool/solid`** — SolidJS 3D 查看器组件。
