@@ -11,9 +11,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, '../../..');
 const sample = resolve(repoRoot, 'packages/core/sample.vox');
 
-test('listFormats 返回全部 7 种格式', () => {
-  expect(listFormats()).toEqual(expect.arrayContaining(['glb', 'gltf', 'obj', 'stl', 'ply', 'usdz', 'fbx']));
-  expect(FORMATS.length).toBe(7);
+test('listFormats 返回全部 8 种格式 (含 vox 回写)', () => {
+  expect(listFormats()).toEqual(expect.arrayContaining(['glb', 'gltf', 'obj', 'stl', 'ply', 'usdz', 'fbx', 'vox']));
+  expect(FORMATS.length).toBe(8);
 });
 
 test('导出 glb 且魔数正确', async () => {
@@ -37,4 +37,14 @@ test('省略 format 时默认导出 glb', async () => {
 
 test('不支持的格式抛错', async () => {
   await expect(exportVoxFile(sample, { format: 'xyz' })).rejects.toThrow('不支持的格式');
+});
+
+test('导出 vox (round-trip) 且魔数正确', async () => {
+  const outDir = resolve(__dirname, '.tmp');
+  mkdirSync(outDir, { recursive: true });
+  const out = resolve(outDir, 'rt.vox');
+  const { outputPath, bytes } = await exportVoxFile(sample, { format: 'vox', output: out });
+  expect(Buffer.from(bytes.subarray(0, 4)).toString('ascii')).toBe('VOX ');
+  expect(readFileSync(outputPath).subarray(0, 4).toString('ascii')).toBe('VOX ');
+  rmSync(outDir, { recursive: true, force: true });
 });

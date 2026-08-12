@@ -169,3 +169,31 @@ describe('材质与多实例', () => {
     expect(defaultPalette().length).toBe(256); // 确保默认调色板可用
   });
 });
+
+describe('vox 回写 (round-trip)', () => {
+  test('解析结果 -> 写回 .vox 无损 (魔数 VOX + 体素数一致)', async () => {
+    const grid = makeSampleGrid();
+    const vox = parseVox(toVoxBytes(grid, pal));
+    const exporter = new VoxelExporter(vox);
+    const bytes = u8(await exporter.export('vox'));
+    expect(new TextDecoder().decode(bytes.subarray(0, 4))).toBe('VOX ');
+    const back = parseVox(bytes);
+    expect(back.models.length).toBe(vox.models.length);
+    expect(back.models[0].voxels.length).toBe(vox.models[0].voxels.length);
+  });
+
+  test('多实例输入反推 models+scene 写回也能解析', async () => {
+    const exporter = new VoxelExporter({
+      instances: [
+        { voxels: [{ x: 0, y: 0, z: 0, i: 1 }], translation: [0, 0, 0] },
+        { voxels: [{ x: 5, y: 0, z: 0, i: 2 }], translation: [0, 0, 0] },
+      ],
+      palette: pal,
+    });
+    const bytes = u8(await exporter.export('vox'));
+    expect(new TextDecoder().decode(bytes.subarray(0, 4))).toBe('VOX ');
+    const back = parseVox(bytes);
+    expect(back.models.length).toBe(2);
+    expect(back.scene.length).toBe(2);
+  });
+});

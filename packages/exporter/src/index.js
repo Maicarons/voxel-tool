@@ -12,6 +12,7 @@
 //   // 2) 纯数据 (无需 core): 多实例 + 调色板
 //   const obj = buildExportObject({ instances, palette, materials });
 //   const bytes = await exportModel(obj, 'fbx'); // Uint8Array
+import { toVoxBytesScene } from '@voxel-tool/core';
 import { buildExportObject, normalizeInput } from './build.js';
 import {
   exportModel,
@@ -64,8 +65,43 @@ export class VoxelExporter {
    * @returns {Promise<string|ArrayBuffer|Uint8Array|DataView>}
    */
   export(format, options = {}) {
+    if (format === 'vox') return this.exportVox(options);
     const object = this.build();
     return exportModel(object, format, options);
+  }
+
+  /**
+   * 把体素数据无损写回 MagicaVoxel .vox 二进制 (round-trip)。
+   * - 若输入是 parseVox 结果 (含 models + scene)，直接原样回写 (保留材质/变换/隐藏)。
+   * - 否则把归一化后的实例反推成 { models, scene } 再写 (每个实例成为一个模型)。
+   * @param {object} [_options]
+   * @returns {Promise<Uint8Array>}
+   */
+  exportVox(_options = {}) {
+    const input = this.input;
+    // 路径 A: parseVox 结果 -> 直接无损往返
+    if (input && Array.isArray(input.models) && Array.isArray(input.scene)) {
+      return Promise.resolve(toVoxBytesScene(input, input.palette || null));
+    }
+    // 路径 B: { model } / { instances } -> 反推 models + scene
+    const { palette, materials, instances } = normalizeInput(input);
+    const models = instances.map((inst) => {
+      let sx = 0, sy = 0, sz = 0;
+      for (const v of inst.voxels) {
+        if (v.x + 1 > sx) sx = v.x + 1;
+        if (v.y + 1 > sy) sy = v.y + 1;
+        if (v.z + 1 > sz) sz = v.z + 1;
+      }
+      return { size: [sx, sy, sz], voxels: inst.voxels };
+    });
+    const scene = instances.map((inst, i) => ({
+      modelIndex: i,
+      translation: inst.translation || [0, 0, 0],
+      rotation: inst.rotation || 0,
+      hidden: !!inst.hidden,
+      name: inst.name || '',
+    }));
+    return Promise.resolve(toVoxBytesScene({ models, scene, materials }, palette));
   }
 
   /**

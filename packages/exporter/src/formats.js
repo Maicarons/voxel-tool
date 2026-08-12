@@ -18,8 +18,8 @@ import { PLYExporter } from 'three/addons/exporters/PLYExporter.js';
 import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
 import { FBXExporter } from '@comfyorg/fbx-exporter-three';
 
-/** 全部支持的格式 */
-export const FORMATS = ['glb', 'gltf', 'obj', 'stl', 'ply', 'usdz', 'fbx'];
+/** 全部支持的格式 (含 vox 回写) */
+export const FORMATS = ['glb', 'gltf', 'obj', 'stl', 'ply', 'usdz', 'fbx', 'vox'];
 
 /** 各格式默认文件名 */
 export const DEFAULT_FILENAMES = {
@@ -30,6 +30,7 @@ export const DEFAULT_FILENAMES = {
   ply: 'model.ply',
   usdz: 'model.usdz',
   fbx: 'model.fbx',
+  vox: 'model.vox',
 };
 
 /** 各格式推荐 MIME */
