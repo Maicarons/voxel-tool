@@ -67,10 +67,12 @@ jobs:
       - name: Build all packages
         run: npm run build
 
-      # 顺序: 先发 core, 再发它依赖的 viewer, 最后发依赖 viewer 的各框架组件。
+      # 顺序: core -> mesh -> exporter/viewer -> 各框架组件 -> cli。
+      # mesh 被 viewer 与 exporter 共同依赖, 必须先于二者发布, 否则二者 npm publish 时
+      # 依赖解析不到 @voxel-tool/mesh 而装包失败。
       # --provenance 生成供应链溯源证明 (需 OIDC, 与可信发布天然契合)。
       # 幂等: 若某包当前版本已在 registry 存在则跳过，避免重跑时遇 409 中断整个 job
-      # (例如 core/viewer 等已发布、只有新增的 exporter 需要发的情况)。
+      # (例如 core/viewer 等已发布、只有新增的 mesh / bump 后的 exporter 需要发的情况)。
       - name: Publish all packages (idempotent, dependency order)
         run: |
           publish_pkg () {
@@ -85,6 +87,7 @@ jobs:
             fi
           }
           publish_pkg @voxel-tool/core      packages/core
+          publish_pkg @voxel-tool/mesh      packages/mesh
           publish_pkg @voxel-tool/exporter  packages/exporter
           publish_pkg @voxel-tool/viewer    packages/viewer
           publish_pkg @voxel-tool/react     packages/react

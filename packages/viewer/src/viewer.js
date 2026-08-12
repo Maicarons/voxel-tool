@@ -19,7 +19,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { parseVox, ROTATION_MATRICES } from '@voxel-tool/core';
-import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from './mesh.js';
+import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial, composeWorldMatrix } from './mesh.js';
 
 const DEFAULT_BG = '#16181e';
 
@@ -144,14 +144,8 @@ export function createVoxelViewer(container, options = {}) {
   }
 
   function worldMatrix(translation, rotation) {
-    const t = translation || [0, 0, 0];
     const R = ROTATION_MATRICES[rotation] || ROTATION_MATRICES[0];
-    return new THREE.Matrix4().set(
-      R[0], R[1], R[2], t[0],
-      R[3], R[4], R[5], t[1],
-      R[6], R[7], R[8], t[2],
-      0, 0, 0, 1,
-    );
+    return composeWorldMatrix(R, translation);
   }
 
   function addInstance(voxels, palette, materials, translation, rotation, hidden, frames) {

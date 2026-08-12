@@ -37,7 +37,7 @@ export {
 };
 
 // 低层几何构建 (与 viewer 同算法, 带 sRGB->linear 修正)
-export { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from './geometry.js';
+export { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial, composeWorldMatrix } from '@voxel-tool/mesh';
 
 /**
  * 体素导出器: 把 VOX / 体素数据导出为通用 3D 格式。

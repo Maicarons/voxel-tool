@@ -79,6 +79,7 @@ export function createVoxelViewer(
 export function buildVoxelGeometry(
   voxels: Voxel[],
   palette: RGBA[] | null,
+  opts?: { colorSpace?: 'raw' | 'linear' },
 ): THREE.BufferGeometry;
 
 /** 按材质分桶: 每个桶一个几何体 + 材质 id (默认桶 id=0) */
@@ -86,6 +87,7 @@ export function buildVoxelBuckets(
   voxels: Voxel[],
   palette: RGBA[] | null,
   materials: Record<number, Material> | undefined,
+  opts?: { colorSpace?: 'raw' | 'linear' },
 ): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
 
 /** Greedy meshing 变体: 共面同色相邻暴露面合并为最大矩形 (P3.2)。
@@ -93,6 +95,7 @@ export function buildVoxelBuckets(
 export function buildVoxelGeometryGreedy(
   voxels: Voxel[],
   palette: RGBA[] | null,
+  opts?: { colorSpace?: 'raw' | 'linear' },
 ): THREE.BufferGeometry;
 
 /** 按材质分桶的 greedy 变体 (P3.2) */
@@ -100,10 +103,18 @@ export function buildVoxelBucketsGreedy(
   voxels: Voxel[],
   palette: RGBA[] | null,
   materials: Record<number, Material> | undefined,
+  opts?: { colorSpace?: 'raw' | 'linear' },
 ): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
 
-/** 根据材质 id 生成 three 材质 (id=0 -> Lambert 顶点色; 否则 Standard) */
+/** 根据材质 id 生成 three 材质 (id=0 -> 默认材质; 否则 Standard) */
 export function makeMaterial(
   materialId: number,
   materials: Record<number, Material> | undefined,
+  opts?: { defaultMaterial?: 'lambert' | 'standard'; side?: THREE.Side },
 ): THREE.Material;
+
+/** 由旋转矩阵 R 与平移构造 z-up 本地空间的 world Matrix4 (共享自 @voxel-tool/mesh) */
+export function composeWorldMatrix(
+  R: number[],
+  translation?: [number, number, number],
+): THREE.Matrix4;

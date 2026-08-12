@@ -35,6 +35,7 @@ hero:
 **voxel-tool** is a JavaScript toolkit for [MagicaVoxel](https://ephtracy.github.io/) `.vox` voxel models:
 
 - **`@voxel-tool/core`** — Pure-JS core: `.vox` read/write, palette helpers, and the `VoxelGrid` container.
+- **`@voxel-tool/mesh`** — Shared voxel-geometry core (Three.js): the single face-culling + greedy-meshing `buildVoxelGeometry` implementation, reused by both `@voxel-tool/viewer` and `@voxel-tool/exporter`; color-space and material differences are parameterized.
 - **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses it.
 - **`@voxel-tool/exporter`** — Standalone export library: voxel models → GLB / glTF / OBJ / STL / PLY / USDZ / FBX, plus lossless `.vox` round-trip and glTF/GLB animation baking.
 - **`@voxel-tool/react`** — React 3D viewer component (Three.js).

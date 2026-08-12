@@ -35,6 +35,7 @@ hero:
 **voxel-tool** 是一套用于 [MagicaVoxel](https://ephtracy.github.io/) `.vox` 体素模型的 JavaScript 工具集：
 
 - **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 文件读写、调色板工具、`VoxelGrid` 体素容器。
+- **`@voxel-tool/mesh`** — 共享体素几何核心 (Three.js)：面剔除 + greedy meshing 的 `buildVoxelGeometry` 单一实现，被 `@voxel-tool/viewer` 与 `@voxel-tool/exporter` 共用；颜色空间与材质差异通过参数表达。
 - **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用它。
 - **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX，并支持 `.vox` 无损往返与 glTF/GLB 动画烘焙。
 - **`@voxel-tool/react`** — React 3D 查看器组件（基于 Three.js）。

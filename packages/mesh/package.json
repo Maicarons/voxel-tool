@@ -1,7 +1,7 @@
 {
-  "name": "@voxel-tool/exporter",
-  "version": "0.4.2",
-  "description": "Voxel model exporter — convert .vox / voxel data to GLTF, GLB, OBJ, STL, PLY, USDZ and FBX (built on Three.js exporters)",
+  "name": "@voxel-tool/mesh",
+  "version": "0.1.0",
+  "description": "Shared voxel mesh construction (face culling + vertex colors + greedy meshing + instance transform), used by @voxel-tool/viewer and @voxel-tool/exporter",
   "type": "module",
   "main": "dist/index.js",
   "module": "dist/index.js",
@@ -22,9 +22,6 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@voxel-tool/core": "^0.3.0",
-    "@voxel-tool/mesh": "^0.1.0",
-    "@comfyorg/fbx-exporter-three": "^1.0.1",
     "three": "^0.184.0"
   },
   "devDependencies": {
@@ -34,22 +31,15 @@
     "vox",
     "magicavoxel",
     "voxel",
-    "exporter",
-    "gltf",
-    "glb",
-    "obj",
-    "stl",
-    "ply",
-    "usdz",
-    "fbx",
     "three",
+    "mesh",
     "voxel-tool"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Maicarons/voxel-tool.git",
-    "directory": "packages/exporter"
+    "directory": "packages/mesh"
   },
   "homepage": "https://github.com/Maicarons/voxel-tool#readme",
   "bugs": {

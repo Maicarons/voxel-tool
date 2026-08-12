@@ -8,6 +8,7 @@
 A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core library for reading/writing, plus real 3D viewer components built on Three.js — available for **React / Vue / SolidJS / Preact / Svelte / Qwik**.
 
 - 📦 **`@voxel-tool/core`** — Dependency-free core (`.vox` read/write, palettes, voxel grid `VoxelGrid`), runs in Node and the browser with zero runtime dependencies. Also parses and writes MagicaVoxel **frame animation** (FRAM + nTRN keyframes) losslessly.
+- 🔷 **`@voxel-tool/mesh`** — Shared voxel-geometry core (Three.js): the single implementation of face-culling + greedy-meshing `buildVoxelGeometry`, reused by both `@voxel-tool/viewer` and `@voxel-tool/exporter`. Color-space (`raw` vs sRGB→linear) and material differences are parameterized, so the algorithm lives in exactly one place.
 - 🧩 **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses the same rendering implementation. Supports **animation playback** (`play`/`pause`/`setFrame`/…) and an optional **WebGPU** backend (auto-fallback to WebGL).
 - 📤 **`@voxel-tool/exporter`** — Standalone export library: voxel models → GLB / glTF / OBJ / STL / PLY / USDZ / FBX, plus lossless `.vox` round-trip and glTF/GLB **animation baking**.
 - ⚛️ **`@voxel-tool/react`** — React 3D viewer component.
@@ -31,6 +32,7 @@ A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core li
 voxel-tool/
 ├── packages/
 │   ├── core/        @voxel-tool/core    dependency-free core (read/write / palettes / grid)
+│   ├── mesh/        @voxel-tool/mesh    shared voxel geometry core (face culling + greedy meshing, Three.js)
 │   ├── viewer/      @voxel-tool/viewer  framework-agnostic viewer core (Three.js)
 │   ├── react/       @voxel-tool/react   React 3D viewer component
 │   ├── vue/         @voxel-tool/vue     Vue 3 3D viewer component

@@ -9,6 +9,7 @@ import {
 } from '@voxel-tool/core';
 import { VoxelExporter } from '@voxel-tool/exporter';
 import type { VoxelFormat } from '@voxel-tool/exporter';
+import { EditorUndoStack } from './undo';
 
 // 重新导出供 UI 层 (Toolbar / App) 引用, 避免重复 import 第三方包
 export type { VoxelFormat } from '@voxel-tool/exporter';
@@ -53,7 +54,7 @@ export class VoxelEditor {
   private mode: EditMode = 'paint';
   private currentColor = 1;
   private showGrid = true;
-  private undoStack: string[] = [];
+  private undoStack = new EditorUndoStack();
   private cb: EditorCallbacks;
   private resizeObserver: ResizeObserver;
   private rafId = 0;
@@ -153,7 +154,7 @@ export class VoxelEditor {
   }
 
   newModel(sx = this.defaultSize, sy = this.defaultSize, sz = this.defaultSize) {
-    this.undoStack.length = 0;
+    this.undoStack.clear();
     this.grid = new VoxelGrid(sx, sy, sz);
     this.palette = defaultPalette();
     this.updateGroundAndGrid();
@@ -175,7 +176,7 @@ export class VoxelEditor {
     const { models, palette } = parseVox(buffer);
     if (!models.length) throw new Error('VOX 文件不包含任何模型');
     const m = models[0];
-    this.undoStack.length = 0;
+    this.undoStack.clear();
     this.grid = new VoxelGrid(m.size[0], m.size[1], m.size[2]);
     for (const v of m.voxels) {
       this.grid.voxels.set(keyOf(v.x, v.y, v.z), v.i);
@@ -191,7 +192,7 @@ export class VoxelEditor {
   /** 载入一个彩色球体 demo, 便于首次打开即有内容可编辑 */
   loadDemo() {
     const s = this.defaultSize;
-    this.undoStack.length = 0;
+    this.undoStack.clear();
     this.grid = new VoxelGrid(s, s, s);
     this.palette = defaultPalette();
     const r = 9;
@@ -214,7 +215,7 @@ export class VoxelEditor {
     for (const v of list) this.grid.voxels.set(keyOf(v.x, v.y, v.z), v.i);
     this.rebuildMeshes();
     this.emitStats();
-    this.cb.onUndoChange?.(this.undoStack.length > 0);
+    this.cb.onUndoChange?.(this.undoStack.canUndo);
   }
 
   toBytes(): Uint8Array {
@@ -327,8 +328,7 @@ export class VoxelEditor {
 
   private beginEdit() {
     this.undoStack.push(JSON.stringify(this.grid.list()));
-    if (this.undoStack.length > 100) this.undoStack.shift();
-    this.cb.onUndoChange?.(this.undoStack.length > 0);
+    this.cb.onUndoChange?.(this.undoStack.canUndo);
   }
 
   private emitStats() {

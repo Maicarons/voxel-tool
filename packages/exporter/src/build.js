@@ -9,7 +9,7 @@
 // y-up, 与 viewer 完全对齐, 保证 Blender/Unity 里模型「立着」且颜色正确。
 import * as THREE from 'three';
 import { ROTATION_MATRICES, defaultPalette } from '@voxel-tool/core';
-import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from './geometry.js';
+import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial, composeWorldMatrix } from '@voxel-tool/mesh';
 
 /**
  * 把各种输入归一化成统一结构:
@@ -79,28 +79,22 @@ export function buildExportObject(input) {
     if (inst.hidden) continue;
     const baseName = (inst.name || `instance_${ii}`).replace(/\s+/g, '_');
     const groups = hasMaterials
-      ? buildVoxelBucketsGreedy(inst.voxels, palette, materials)
-      : [{ geometry: buildVoxelGeometryGreedy(inst.voxels, palette), materialId: 0 }];
+      ? buildVoxelBucketsGreedy(inst.voxels, palette, materials, { colorSpace: 'linear' })
+      : [{ geometry: buildVoxelGeometryGreedy(inst.voxels, palette, { colorSpace: 'linear' }), materialId: 0 }];
 
     const frames = inst.frames && inst.frames.length > 1 ? inst.frames : null;
 
     for (let gi = 0; gi < groups.length; gi++) {
       const g = groups[gi];
-      const mat = makeMaterial(g.materialId, materials);
+      const mat = makeMaterial(g.materialId, materials, { defaultMaterial: 'standard', side: THREE.FrontSide });
       const mesh = new THREE.Mesh(g.geometry, mat);
       const meshName = groups.length > 1 ? `${baseName}_m${gi}` : baseName;
       mesh.name = meshName;
 
       if (!frames) {
         // 静态变换: world = R * local + t (z-up 本地空间)
-        const t = inst.translation;
         const R = ROTATION_MATRICES[inst.rotation] || ROTATION_MATRICES[0];
-        const m4 = new THREE.Matrix4().set(
-          R[0], R[1], R[2], t[0],
-          R[3], R[4], R[5], t[1],
-          R[6], R[7], R[8], t[2],
-          0, 0, 0, 1,
-        );
+        const m4 = composeWorldMatrix(R, inst.translation);
         const pos = new THREE.Vector3();
         const quat = new THREE.Quaternion();
         const scl = new THREE.Vector3();
@@ -115,14 +109,8 @@ export function buildExportObject(input) {
         const quatVals = [];
         for (let f = 0; f < frames.length; f++) {
           const fr = frames[f];
-          const t = fr.translation || [0, 0, 0];
           const R = ROTATION_MATRICES[fr.rotation] || ROTATION_MATRICES[0];
-          const m4 = new THREE.Matrix4().set(
-            R[0], R[1], R[2], t[0],
-            R[3], R[4], R[5], t[1],
-            R[6], R[7], R[8], t[2],
-            0, 0, 0, 1,
-          );
+          const m4 = composeWorldMatrix(R, fr.translation || [0, 0, 0]);
           const pos = new THREE.Vector3();
           const quat = new THREE.Quaternion();
           const scl = new THREE.Vector3();

@@ -2,7 +2,7 @@
 import { describe, test, expect } from 'vitest';
 import { VoxelGrid, toVoxBytes, toVoxBytesScene, parseVox, rainbowPalette, defaultPalette } from '../../core/src/index.js';
 import { VoxelExporter, buildExportObject, exportModel, toUint8Array } from '../src/index.js';
-import { buildVoxelGeometry, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy } from '../src/geometry.js';
+import { buildVoxelGeometry, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy } from '../src/index.js';
 import * as THREE from 'three';
 
 const pal = rainbowPalette();

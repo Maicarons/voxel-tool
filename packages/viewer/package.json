@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/viewer",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Framework-agnostic Three.js voxel viewer core (buildVoxelGeometry + createVoxelViewer), shared by the React/Vue/Solid/Preact/Svelte/Qwik components",
   "type": "module",
   "main": "dist/index.js",
@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@voxel-tool/core": "^0.3.0",
+    "@voxel-tool/mesh": "^0.1.0",
     "three": "^0.184.0"
   },
   "devDependencies": {

@@ -8,6 +8,7 @@
 一套用于 **MagicaVoxel `.vox` 文件** 的 JavaScript 工具集：纯 JS 读写核心库 + 基于 Three.js 真实 3D 渲染的查看器组件，覆盖 **React / Vue / SolidJS / Preact / Svelte / Qwik** 六大框架。
 
 - 📦 **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 读写、调色板、体素网格（`VoxelGrid`），Node 与浏览器通用，零运行时依赖。还能**无损解析与写回** MagicaVoxel 帧动画（FRAM + nTRN 关键帧）。
+- 🔷 **`@voxel-tool/mesh`** — 共享体素几何核心 (Three.js)：面剔除 + greedy meshing 的 `buildVoxelGeometry` 单一实现，被 `@voxel-tool/viewer` 与 `@voxel-tool/exporter` 共用；颜色空间（`raw` / sRGB→linear）与材质差异通过参数表达，算法只存在一处。
 - 🧩 **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用同一套渲染实现。支持**动画播放**（`play`/`pause`/`setFrame`/…）与可选 **WebGPU** 后端（自动回退 WebGL）。
 - 📤 **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX，并支持 `.vox` 无损往返与 glTF/GLB **动画烘焙**。
 - ⚛️ **`@voxel-tool/react`** — React 3D 查看器组件。
@@ -31,6 +32,7 @@
 voxel-tool/
 ├── packages/
 │   ├── core/        @voxel-tool/core    纯 JS 核心库 (读写/调色板/网格)
+│   ├── mesh/        @voxel-tool/mesh    共享体素几何核心 (面剔除+greedy meshing, Three.js)
 │   ├── viewer/      @voxel-tool/viewer  框架无关查看器核心 (Three.js)
 │   ├── react/       @voxel-tool/react   React 3D 查看器组件
 │   ├── vue/         @voxel-tool/vue     Vue 3 3D 查看器组件

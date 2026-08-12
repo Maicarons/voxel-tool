@@ -97,20 +97,23 @@ export declare function normalizeInput(input: VoxelExportInput): {
 export declare function buildExportObject(input: VoxelExportInput): THREE.Group;
 
 /** 合并 + 面剔除 + 顶点色(sRGB->linear 已修正) 几何体, 处于 voxel 本地 z-up 空间 */
-export declare function buildVoxelGeometry(voxels: Voxel[], palette: RGBA[] | null): THREE.BufferGeometry;
+export declare function buildVoxelGeometry(voxels: Voxel[], palette: RGBA[] | null, opts?: { colorSpace?: 'raw' | 'linear' }): THREE.BufferGeometry;
 /** 按材质分桶 */
 export declare function buildVoxelBuckets(
   voxels: Voxel[],
   palette: RGBA[] | null,
   materials: Record<number, Material>,
+  opts?: { colorSpace?: 'raw' | 'linear' },
 ): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
 /** 合并 + 面剔除 + 顶点色(sRGB->linear) 的 greedy meshing 变体 (P3.2)。
  *  暴露面多重集与朴素版一致, 仅几何更紧凑。 */
-export declare function buildVoxelGeometryGreedy(voxels: Voxel[], palette: RGBA[] | null): THREE.BufferGeometry;
+export declare function buildVoxelGeometryGreedy(voxels: Voxel[], palette: RGBA[] | null, opts?: { colorSpace?: 'raw' | 'linear' }): THREE.BufferGeometry;
 /** 按材质分桶的 greedy 变体 (P3.2) */
-export declare function buildVoxelBucketsGreedy(voxels: Voxel[], palette: RGBA[] | null, materials: Record<number, Material>): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
+export declare function buildVoxelBucketsGreedy(voxels: Voxel[], palette: RGBA[] | null, materials: Record<number, Material>, opts?: { colorSpace?: 'raw' | 'linear' }): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
 /** 根据材质 id 生成 three 材质 */
-export declare function makeMaterial(materialId: number, materials?: Record<number, Material>): THREE.Material;
+export declare function makeMaterial(materialId: number, materials?: Record<number, Material>, opts?: { defaultMaterial?: 'lambert' | 'standard'; side?: THREE.Side }): THREE.Material;
+/** 由旋转矩阵 R 与平移构造 z-up 本地空间的 world Matrix4 (共享自 @voxel-tool/mesh) */
+export declare function composeWorldMatrix(R: number[], translation?: [number, number, number]): THREE.Matrix4;
 
 /** 多格式导出调度 */
 export declare function exportModel(

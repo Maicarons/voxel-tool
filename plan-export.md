@@ -5,6 +5,16 @@
 > 相关代码：`packages/core`、`packages/viewer`、`apps/vox-editor`。
 > 研究方向已从「在 viewer 内加 exporters.js」调整为「独立导出包」（用户要求独立成包，并与其他包同属 `@voxel-tool` 作用域）。
 
+## 0. 架构演进：体素网格算法上提至 `@voxel-tool/mesh`（2026-08-12，P0 解耦）
+
+> 原 `packages/viewer/src/mesh.js` 与 `packages/exporter/src/geometry.js` **逐行重复约 290 行**体素网格算法（FACES/NEIGHBORS、buildVoxelGeometry/BuildVoxelBuckets、整套 greedy meshing、emitGreedyQuads/appendGreedyQuad），唯二差异是顶点色（raw sRGB `col/255` vs sRGB→linear）与默认材质（Lambert/DoubleSide vs Standard/FrontSide）。现已抽为共享包 **`@voxel-tool/mesh`**（依赖 three + core），依赖顺序 `core → mesh → viewer/exporter`。
+
+- **`packages/mesh/src/geometry.js`**：`buildVoxelGeometry` / `buildVoxelBuckets` / `buildVoxelGeometryGreedy` / `buildVoxelBucketsGreedy` / `makeMaterial` / `composeWorldMatrix`（实例变换 `R(rotation)·T(translation)` 也下沉至此，viewer 的 `worldMatrix` 与 exporter 的静态/动画变换改用它）。差异通过 `opts.colorSpace: 'raw' | 'linear'` 与 `opts.defaultMaterial: 'lambert' | 'standard'`、`opts.side` **参数化**，不再各写一份。
+- **`packages/viewer/src/mesh.js`**：退化为 re-export `@voxel-tool/mesh` 的**薄转发壳**（默认 `colorSpace:'raw'` + Lambert/DoubleSide，等价原行为）。
+- **`packages/exporter/src/geometry.js`**：退化为 re-export `@voxel-tool/mesh` 的薄转发壳；`build.js` 调用处显式传 `{ colorSpace: 'linear' }` 与 `{ defaultMaterial: 'standard', side: THREE.FrontSide }` 还原导出侧正确色彩/材质。
+- 6 个框架包（react/vue/preact/solid/svelte/qwik）的 `buildVoxelGeometry` 本就 re-export 自 `@voxel-tool/viewer`，**完全未动**；其中 react/vue 原各有一份无引用的 `src/mesh.js` 转发壳，已删除（死代码）。
+- 验证：typecheck 通过；viewer 13/13、exporter 27/27、cli 5/5、react 3/3、vue 3/3 测试全绿。
+
 ---
 
 ## 1. 可行性结论（TL;DR）
@@ -27,8 +37,8 @@
 ## 2. 现状梳理（现有代码资产）
 
 - **`packages/core`**：只导出 `.vox`（`toVoxBytes` / `toVoxBytesScene` / `downloadVox`）。无 three 依赖，轻量。
-- **`packages/viewer`**（依赖 three）：
-  - `mesh.js` 的 `buildVoxelGeometry` / `buildVoxelBuckets` 产出**合并 + 面剔除 + 带顶点色**几何体，已按材质分桶。
+- **`packages/viewer`**（依赖 three + `@voxel-tool/mesh`）：
+  - `mesh.js` 现为 `@voxel-tool/mesh` 的**薄转发壳**：`buildVoxelGeometry` / `buildVoxelBuckets` 实际实现在共享包，默认 `colorSpace:'raw'`（= 旧 `col/255`）。
   - `viewer.js` 的 `sceneRoot`（`Group`，`rotation.x = -π/2`）是多实例 + 材质的世界变换根 —— 即导出时的现成对象。
 - **`apps/vox-editor`**（React + three）：
   - `VoxelEditor`（`editor.ts`）用「**每体素一个 BoxGeometry + 每色一个 Lambert 材质**」，**无顶点色、无面剔除**；已有 `exportVox` / `exportPng`。
@@ -43,7 +53,7 @@
 
 ### 3.1 独立包 `packages/exporter`
 
-- `src/geometry.js`：移植 viewer/mesh.js 的 `buildVoxelGeometry` / `buildVoxelBuckets` / `makeMaterial`，**额外做 sRGB→linear 顶点色修正**（见 §4），默认材质用 `MeshStandardMaterial` + `FrontSide`（对 GLTF/USDZ/FBX 保真更好，且 USDZ 不支持双面）。
+- `src/geometry.js`：现为 `@voxel-tool/mesh` 的**薄转发壳**；`build.js` 调用 `buildVoxel*` 时显式传 `opts.colorSpace: 'linear'` 做 sRGB→linear 顶点色修正（见 §4），默认材质 `MeshStandardMaterial` + `FrontSide`（对 GLTF/USDZ/FBX 保真更好，且 USDZ 不支持双面）。共享包才是算法唯一来源。
 - `src/build.js`：`normalizeInput` + `buildExportObject` —— 把 VOX 解析结果 / 单模型 / 多实例统一装配成 **y-up 的 `THREE.Group`**（`rotation.x = -π/2`，与 viewer 对齐），每个实例按材质分桶成 Mesh 并施加 `R(rotation)·T(translation)` 世界变换。
 - `src/formats.js`：`exportModel(object3d, format, options)` 调度 7 种格式；GLTF/OBJ/STL/PLY/USDZ 走 three 内置 exporter，FBX 走 `@comfyorg/fbx-exporter-three`（`parseSync(obj, { preset:'threejs', axisUp:'Y' })`）。另提供 `toBlob` / `toUint8Array` / `downloadModel` 辅助。
 - `src/index.js`：`VoxelExporter` 类（`build` / `export` / `toBlob` / `download`）+ 上述函数再导出。
@@ -64,7 +74,7 @@
   - `OBJExporter` 内部 `convertLinearToSRGB` → 导出的 OBJ 顶点色还原为原始调色板色（仅 Points 路径）。
   - `GLTFExporter` 以 linear 存文件、导入端转 sRGB → 也还原。
   - 屏幕显示同步修正为 WYSIWYG。
-- 注：`packages/viewer/src/mesh.js` 的 `buildVoxelGeometry` 仍按旧逻辑（`col/255` 直接写），**未在本次改动**；如需 viewer 渲染也 WYSIWYG，可后续把同一修正移植过去（导出包已独立修正，不影响 viewer）。
+- 注：`@voxel-tool/viewer` 的 `buildVoxelGeometry` 经 `@voxel-tool/mesh` 共享包默认 `colorSpace:'raw'`（`col/255` 直接写）渲染，**行为与原 viewer 一致**；导出侧通过 `opts.colorSpace:'linear'` 走 sRGB→linear 修正（P0 解耦后两端共用同一实现、仅参数不同）。若要让 viewer 渲染也 WYSIWYG，只需在 viewer 侧改用 `colorSpace:'linear'`，无需重写算法。
 
 ---
 
