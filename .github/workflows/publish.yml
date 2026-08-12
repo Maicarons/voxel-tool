@@ -81,9 +81,23 @@ jobs:
             ver=$(node -p "require('./$dir/package.json').version")
             if npm view "$name@$ver" version >/dev/null 2>&1; then
               echo "skip: $name@$ver already published"
+              return
+            fi
+            echo "publishing $name@$ver"
+            npm publish -w "$name" --provenance --access public
+            # npm client can report success on a rolled-back/eventually-consistent write,
+            # so verify the package actually landed before moving on. Retry once if not.
+            if npm view "$name@$ver" version >/dev/null 2>&1; then
+              echo "verified: $name@$ver on registry"
             else
-              echo "publishing $name@$ver"
+              echo "WARN: $name@$ver not visible after publish, retrying once"
               npm publish -w "$name" --provenance --access public
+              if npm view "$name@$ver" version >/dev/null 2>&1; then
+                echo "verified on retry: $name@$ver"
+              else
+                echo "ERROR: $name@$ver still missing after retry"
+                exit 1
+              fi
             fi
           }
           publish_pkg @voxel-tool/core      packages/core
