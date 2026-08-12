@@ -18,6 +18,10 @@
 
 > 渲染原理参考主流 `.vox` viewer（MagicaVoxel / `threejs-vox-loader` / coding.kiwi 的 *Rendering .vox Files*）：每个体素是真实 3D 立方体，靠 WebGL 深度缓冲正确遮挡；只对暴露面生成几何（面剔除），把 6×N 个面砍到外壳，大模型也能秒渲。所有框架组件共享 `@voxel-tool/viewer` 同一份实现，不存在「每个框架重写一遍渲染」的重复代码。
 
+<p align="center">
+  <img src="media/voxel-tool-promo.gif" alt="voxel-tool — 60 秒项目演示" width="720"/>
+</p>
+
 ---
 
 ## 仓库结构

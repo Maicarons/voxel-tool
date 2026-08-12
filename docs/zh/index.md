@@ -22,6 +22,10 @@ hero:
 
 ---
 
+<div style="text-align:center">
+  <img src="/media/voxel-tool-promo.gif" alt="voxel-tool — 60 秒项目演示" width="720"/>
+</div>
+
 ## 这是什么？
 
 **voxel-tool** 是一套用于 [MagicaVoxel](https://ephtracy.github.io/) `.vox` 体素模型的 JavaScript 工具集：

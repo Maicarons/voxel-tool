@@ -18,6 +18,10 @@ A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core li
 
 > The rendering follows mainstream `.vox` viewers (MagicaVoxel / `threejs-vox-loader` / coding.kiwi's *Rendering .vox Files*): every voxel is a real 3D cube correctly occluded by the WebGL depth buffer; only exposed faces are generated (face culling), trimming 6×N faces down to the outer shell so even large models render instantly. All framework components share the single `@voxel-tool/viewer` implementation — no per-framework re-implementation of the renderer.
 
+<p align="center">
+  <img src="media/voxel-tool-promo.gif" alt="voxel-tool — 60-second project showcase" width="720"/>
+</p>
+
 ---
 
 ## Repository structure

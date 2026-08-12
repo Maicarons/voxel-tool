@@ -22,6 +22,10 @@ hero:
 
 ---
 
+<div style="text-align:center">
+  <img src="/media/voxel-tool-promo.gif" alt="voxel-tool — 60-second project showcase" width="720"/>
+</div>
+
 ## What is this?
 
 **voxel-tool** is a JavaScript toolkit for [MagicaVoxel](https://ephtracy.github.io/) `.vox` voxel models:
