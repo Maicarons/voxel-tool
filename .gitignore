@@ -5,6 +5,8 @@ node_modules/
 dist/
 .vite/
 *.vox
+# 例外: CLI 测试依赖此样本文件, 必须纳入版本控制 (否则 CI 上 ENOENT)
+!packages/core/sample.vox
 
 # 日志
 *.log
