@@ -55,14 +55,18 @@ export async function exportModel(object3d, format, options = {}) {
   switch (format) {
     case 'glb': {
       const exporter = new GLTFExporter();
+      // 关键: 用户没显式给 animations 时, 用 object3d.animations (buildExportObject 烘焙好的 clip).
+      // 绝不能传 animations:[] —— GLTFExporter 收到显式 animations 选项会用它覆盖 object 自带动画, 导致丢动画.
+      const animations = options.animations ?? object3d.animations ?? [];
       return await new Promise((resolve, reject) => {
-        exporter.parse(object3d, (res) => resolve(res), (err) => reject(err), { binary: true, ...options, animations: options.animations || [] });
+        exporter.parse(object3d, (res) => resolve(res), (err) => reject(err), { binary: true, ...options, animations });
       });
     }
     case 'gltf': {
       const exporter = new GLTFExporter();
+      const animations = options.animations ?? object3d.animations ?? [];
       const res = await new Promise((resolve, reject) => {
-        exporter.parse(object3d, (r) => resolve(r), (err) => reject(err), { binary: false, ...options, animations: options.animations || [] });
+        exporter.parse(object3d, (r) => resolve(r), (err) => reject(err), { binary: false, ...options, animations });
       });
       // 非 binary 时 onDone 收到的是 JS 对象, 序列化为 .gltf 文本
       return typeof res === 'string' ? res : JSON.stringify(res, null, 2);
