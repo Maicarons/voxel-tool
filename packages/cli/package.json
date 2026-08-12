@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@voxel-tool/core": "^0.3.0",
-    "@voxel-tool/exporter": "^0.4.0"
+    "@voxel-tool/exporter": "^0.4.1"
   },
   "devDependencies": {
     "vitest": "^4.1.10"
