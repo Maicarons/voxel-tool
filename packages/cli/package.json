@@ -1,0 +1,55 @@
+{
+  "name": "@voxel-tool/cli",
+  "version": "0.1.0",
+  "description": "Command-line voxel exporter — convert MagicaVoxel .vox files to GLTF/GLB/OBJ/STL/PLY/USDZ/FBX headlessly in Node (no browser required)",
+  "type": "module",
+  "bin": {
+    "voxel-export": "bin/voxel-export.mjs"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@voxel-tool/core": "^0.2.0",
+    "@voxel-tool/exporter": "^0.2.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
+  },
+  "keywords": [
+    "vox",
+    "magicavoxel",
+    "voxel",
+    "exporter",
+    "gltf",
+    "glb",
+    "obj",
+    "stl",
+    "ply",
+    "usdz",
+    "fbx",
+    "cli",
+    "three",
+    "voxel-tool"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Maicarons/voxel-tool.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/Maicarons/voxel-tool#readme",
+  "bugs": {
+    "url": "https://github.com/Maicarons/voxel-tool/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

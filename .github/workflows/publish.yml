@@ -93,3 +93,4 @@ jobs:
           publish_pkg @voxel-tool/preact    packages/preact
           publish_pkg @voxel-tool/svelte    packages/svelte
           publish_pkg @voxel-tool/qwik      packages/qwik
+          publish_pkg @voxel-tool/cli       packages/cli
