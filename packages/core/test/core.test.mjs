@@ -137,3 +137,71 @@ describe('场景图 + 材质 无损往返 (0.2.0 核心)', () => {
     expect(legacy.scene[0].modelIndex).toBe(0);
   });
 });
+
+describe('动画 FRAM + nTRN 关键帧 无损往返 (P3 动画)', () => {
+  const palette = makePalette();
+  const models = [buildModel(1, 30), buildModel(5, 40), buildModel(9, 20)];
+  // A: 沿 x 平移 4 帧; B: 旋转 4 帧(平移不变); C: 静态对象(动画文件里不运动)
+  const scene = [
+    {
+      modelIndex: 0,
+      translation: [0, 0, 0],
+      rotation: 0,
+      hidden: false,
+      name: 'A',
+      frames: [
+        { translation: [0, 0, 0], rotation: 0 },
+        { translation: [2, 0, 0], rotation: 0 },
+        { translation: [4, 0, 0], rotation: 0 },
+        { translation: [6, 0, 0], rotation: 0 },
+      ],
+    },
+    {
+      modelIndex: 1,
+      translation: [10, 0, 0],
+      rotation: 0,
+      hidden: false,
+      name: 'B',
+      frames: [
+        { translation: [10, 0, 0], rotation: 0 },
+        { translation: [10, 0, 0], rotation: 1 },
+        { translation: [10, 0, 0], rotation: 2 },
+        { translation: [10, 0, 0], rotation: 3 },
+      ],
+    },
+    { modelIndex: 2, translation: [0, 0, 5], rotation: 6, hidden: false, name: 'C' },
+  ];
+  const bytes = toVoxBytesScene({ models, scene, frameCount: 4 }, palette);
+  const p1 = parseVox(bytes);
+
+  test('frameCount 解析正确', () => {
+    expect(p1.frameCount).toBe(4);
+  });
+
+  test('FRAM + 嵌套 _f 关键帧被解析为逐帧世界变换', () => {
+    expect(p1.scene[0].frames).toEqual([
+      { translation: [0, 0, 0], rotation: 0 },
+      { translation: [2, 0, 0], rotation: 0 },
+      { translation: [4, 0, 0], rotation: 0 },
+      { translation: [6, 0, 0], rotation: 0 },
+    ]);
+    expect(p1.scene[1].frames.map((f) => f.rotation)).toEqual([0, 1, 2, 3]);
+    // 旋转不改变根变换平移
+    expect(p1.scene[1].frames.every((f) => f.translation.join(',') === '10,0,0')).toBe(true);
+  });
+
+  test('动画文件里的静态对象不附加 frames (保持无损)', () => {
+    expect(p1.scene[2].frames).toBeUndefined();
+  });
+
+  test('二次往返场景结构完全一致 (writer->reader->writer->reader)', () => {
+    const bytes2 = toVoxBytesScene(
+      { models: p1.models, scene: p1.scene, materials: p1.materials, frameCount: p1.frameCount },
+      p1.palette,
+    );
+    const p2 = parseVox(bytes2);
+    expect(p2.frameCount).toBe(p1.frameCount);
+    expect(p2.scene).toEqual(p1.scene);
+    expect(p2.models).toEqual(p1.models);
+  });
+});

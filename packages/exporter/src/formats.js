@@ -56,13 +56,13 @@ export async function exportModel(object3d, format, options = {}) {
     case 'glb': {
       const exporter = new GLTFExporter();
       return await new Promise((resolve, reject) => {
-        exporter.parse(object3d, (res) => resolve(res), (err) => reject(err), { binary: true, ...options });
+        exporter.parse(object3d, (res) => resolve(res), (err) => reject(err), { binary: true, ...options, animations: options.animations || [] });
       });
     }
     case 'gltf': {
       const exporter = new GLTFExporter();
       const res = await new Promise((resolve, reject) => {
-        exporter.parse(object3d, (r) => resolve(r), (err) => reject(err), { binary: false, ...options });
+        exporter.parse(object3d, (r) => resolve(r), (err) => reject(err), { binary: false, ...options, animations: options.animations || [] });
       });
       // 非 binary 时 onDone 收到的是 JS 对象, 序列化为 .gltf 文本
       return typeof res === 'string' ? res : JSON.stringify(res, null, 2);

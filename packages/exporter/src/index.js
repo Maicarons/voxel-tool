@@ -67,7 +67,9 @@ export class VoxelExporter {
   export(format, options = {}) {
     if (format === 'vox') return this.exportVox(options);
     const object = this.build();
-    return exportModel(object, format, options);
+    // 动画烘焙结果挂在 root.animations, 仅 glTF/GLB 会消费, 其它格式忽略多余参数
+    const animations = object.animations || [];
+    return exportModel(object, format, { ...options, animations });
   }
 
   /**

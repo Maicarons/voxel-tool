@@ -67,6 +67,7 @@ function rgbaChunk(palette) {
 }
 
 // DICT: int32 numItems; 每项 int32 keyLen + key(str) + int32 valLen + val(str)
+// val 既可以是字符串, 也可以是嵌套 DICT (MagicaVoxel 的 _f 关键帧块, 值为 DICT).
 function dictToBytes(dict) {
   const keys = Object.keys(dict);
   const parts = [];
@@ -74,9 +75,14 @@ function dictToBytes(dict) {
   new DataView(head.buffer).setUint32(0, keys.length, true);
   parts.push(head);
   for (const k of keys) {
-    const val = String(dict[k]);
+    const raw = dict[k];
+    let vb;
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      vb = dictToBytes(raw); // 嵌套 DICT (动画 _f 关键帧块)
+    } else {
+      vb = new TextEncoder().encode(String(raw));
+    }
     const kb = new TextEncoder().encode(k);
-    const vb = new TextEncoder().encode(val);
     const kh = new Uint8Array(4); new DataView(kh.buffer).setUint32(0, kb.length, true);
     const vh = new Uint8Array(4); new DataView(vh.buffer).setUint32(0, vb.length, true);
     parts.push(kh, kb, vh, vb);
@@ -103,11 +109,20 @@ function matlChunk(id, mat) {
   return chunk('MATL', concat(c, dictToBytes(dict)));
 }
 
-function nTRNChunk(nodeId, childId, { name = '', translation = [0, 0, 0], rotation = 0, hidden = false }) {
+function nTRNChunk(nodeId, childId, { name = '', translation = [0, 0, 0], rotation = 0, hidden = false, keyframes = null }) {
   const nodeDict = {};
   if (name) nodeDict._name = name;
   if (hidden) nodeDict._hidden = '1';
   const trnDict = { _t: translation.join(' '), _r: String(rotation) };
+  // 动画: keyframes 是逐帧世界变换 [{translation, rotation}]; 用嵌套 _f 块写出.
+  // 写入枢轴全 0, 使单变换节点在重解析时直接还原为世界变换(无损往返).
+  if (keyframes && keyframes.length > 1) {
+    const fc = keyframes.length;
+    const ts = keyframes.map((kf) => (kf.translation || [0, 0, 0]).join(' ')).join(' ');
+    const rs = keyframes.map((kf) => String(kf.rotation || 0)).join(' ');
+    const ps = keyframes.map(() => '0 0 0').join(' ');
+    trnDict._f = { _f: String(fc), _t: ts, _r: rs, _p: ps };
+  }
   const cId = new Uint8Array(4);
   new DataView(cId.buffer).setUint32(0, nodeId, true);
   const cChild = new Uint8Array(4);
@@ -152,11 +167,13 @@ export function toVoxBytes(grid, palette = null) {
 
 /**
  * 把多模型场景打包成 .vox 二进制 (支持场景图与材质, 可往返).
- * @param {{models:Array, scene?:Array, materials?:object}} data
+ * @param {{models:Array, scene?:Array, materials?:object, frameCount?:number}} data
  *   models: [{ size:[sx,sy,sz], voxels:[{x,y,z,i}] }]
- *   scene:  [{ modelIndex, translation:[x,y,z], rotation, hidden?, name? }]
+ *   scene:  [{ modelIndex, translation:[x,y,z], rotation, hidden?, name?, frames? }]
+ *           frames 为逐帧世界变换 [{translation, rotation}], 存在即表示动画.
  *           省略时每个模型生成一个 identity 实例
  *   materials: { [id]: { type, metalness, roughness, alpha, emissive } }
+ *   frameCount: 时间轴总帧数; 省略时由 scene 中 frames 的最大长度推断
  * @param {Array|null} palette 长度256的 [[r,g,b,a],...]
  */
 export function toVoxBytesScene(data, palette = null) {
@@ -165,6 +182,10 @@ export function toVoxBytesScene(data, palette = null) {
     ? data.scene
     : models.map((_, i) => ({ modelIndex: i, translation: [0, 0, 0], rotation: 0, hidden: false, name: '' }));
   const materials = data.materials || {};
+  // 帧数: 显式给定优先; 否则取最长动画轨道
+  const frameCount = data.frameCount && data.frameCount > 1
+    ? data.frameCount
+    : scene.reduce((m, inst) => Math.max(m, inst.frames ? inst.frames.length : 1), 1);
 
   let children = new Uint8Array(0);
   for (const m of models) {
@@ -175,6 +196,13 @@ export function toVoxBytesScene(data, palette = null) {
     children = concat(children, rgbaChunk(palette));
   }
   for (const id in materials) children = concat(children, matlChunk(Number(id), materials[id]));
+
+  // 时间轴总帧数 (动画文件才写)
+  if (frameCount > 1) {
+    const fc = new Uint8Array(4);
+    new DataView(fc.buffer).setUint32(0, frameCount, true);
+    children = concat(children, chunk('FRAM', dictToBytes({ _f: String(frameCount) })));
+  }
 
   // 场景图: 根 nGRP(0) -> 每个实例一个 nTRN -> nSHP
   const N = scene.length;
@@ -192,6 +220,7 @@ export function toVoxBytesScene(data, palette = null) {
         translation: inst.translation || [0, 0, 0],
         rotation: inst.rotation || 0,
         hidden: !!inst.hidden,
+        keyframes: inst.frames && inst.frames.length > 1 ? inst.frames : null,
       }),
       nSHPChunk(shpIds[j], inst.modelIndex),
     );

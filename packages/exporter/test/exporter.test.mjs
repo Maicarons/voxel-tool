@@ -1,6 +1,6 @@
 // @voxel-tool/exporter 的 Vitest 测试: 覆盖 7 种格式的导出 + 朝向/面剔除/材质。
 import { describe, test, expect } from 'vitest';
-import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette, defaultPalette } from '../../core/src/index.js';
+import { VoxelGrid, toVoxBytes, toVoxBytesScene, parseVox, rainbowPalette, defaultPalette } from '../../core/src/index.js';
 import { VoxelExporter, buildExportObject, exportModel, toUint8Array } from '../src/index.js';
 import { buildVoxelGeometry, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy } from '../src/geometry.js';
 import * as THREE from 'three';
@@ -197,6 +197,76 @@ describe('vox 回写 (round-trip)', () => {
     const back = parseVox(bytes);
     expect(back.models.length).toBe(2);
     expect(back.scene.length).toBe(2);
+  });
+});
+
+describe('动画 glTF 烘焙 (P3 动画)', () => {
+  function buildAnimatedVox() {
+    const models = [
+      { size: [4, 4, 4], voxels: [{ x: 0, y: 0, z: 0, i: 1 }, { x: 1, y: 0, z: 0, i: 2 }] },
+      { size: [4, 4, 4], voxels: [{ x: 0, y: 0, z: 0, i: 3 }, { x: 0, y: 1, z: 0, i: 4 }] },
+    ];
+    const scene = [
+      {
+        modelIndex: 0, translation: [0, 0, 0], rotation: 0, hidden: false, name: 'Walker',
+        frames: [
+          { translation: [0, 0, 0], rotation: 0 },
+          { translation: [2, 0, 0], rotation: 0 },
+          { translation: [4, 0, 0], rotation: 0 },
+          { translation: [6, 0, 0], rotation: 0 },
+        ],
+      },
+      {
+        modelIndex: 1, translation: [10, 0, 0], rotation: 0, hidden: false, name: 'Spinner',
+        frames: [
+          { translation: [10, 0, 0], rotation: 0 },
+          { translation: [10, 0, 0], rotation: 1 },
+          { translation: [10, 0, 0], rotation: 2 },
+          { translation: [10, 0, 0], rotation: 3 },
+        ],
+      },
+    ];
+    return parseVox(toVoxBytesScene({ models, scene, frameCount: 4 }, pal));
+  }
+
+  test('buildExportObject 为动画实例生成 AnimationClip', () => {
+    const vox = buildAnimatedVox();
+    const obj = buildExportObject(vox);
+    // 两个动画实例各一个 mesh (无材质 -> 单桶) -> 2 个 clip
+    expect(obj.animations.length).toBe(2);
+    expect(obj.animations.every((c) => c.tracks.length === 2)).toBe(true); // position + quaternion
+  });
+
+  test('glTF 导出含 animations, 且 sampler 时间轴长度=4', async () => {
+    const vox = buildAnimatedVox();
+    const exporter = new VoxelExporter(vox);
+    const data = await exporter.export('gltf');
+    const json = JSON.parse(data);
+    expect(Array.isArray(json.animations)).toBe(true);
+    expect(json.animations.length).toBe(2);
+    // 每个 clip: 2 个 channel (位置/旋转), 2 个 sampler, 输入时间轴 4 个关键帧
+    for (const anim of json.animations) {
+      expect(anim.channels.length).toBe(2);
+      expect(anim.samplers.length).toBe(2);
+      for (const s of anim.samplers) {
+        const acc = json.accessors[s.input];
+        expect(acc.count).toBe(4); // 4 帧
+      }
+    }
+  });
+
+  test('glb 动画导出不报错且含动画节点 (魔数 glTF)', async () => {
+    const vox = buildAnimatedVox();
+    const exporter = new VoxelExporter(vox);
+    const glb = await exporter.export('glb');
+    const u = u8(glb);
+    expect(new TextDecoder().decode(u.subarray(0, 4))).toBe('glTF');
+  });
+
+  test('静态输入不产生动画 clip (向后兼容)', () => {
+    const vox = parseVox(toVoxBytes(makeSampleGrid(), pal));
+    const obj = buildExportObject(vox);
+    expect(obj.animations.length).toBe(0);
   });
 });
 

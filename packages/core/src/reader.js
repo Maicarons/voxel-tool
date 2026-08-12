@@ -20,8 +20,30 @@ function ascii4(u8, off) {
   return s;
 }
 
-// 读取 DICT: int32 numItems; 每项 int32 keyLen + key(str) + int32 valLen + val(str)
-function readDict(dv, u8, off, end) {
+// 尝试把一段字节当作嵌套 DICT 解析; 仅当结构恰好耗尽整段时才返回, 否则返回 null.
+// 用来识别 MagicaVoxel 的 _f 关键帧块 (DICT 的值是嵌套 DICT).
+function tryParseNestedDict(dv, u8, start, end, depth) {
+  if (end - start < 4) return null;
+  const n = dv.getUint32(start, true);
+  if (n < 0 || n > 100000) return null; //  sanity: 普通字符串几乎不会是合法 DICT
+  let p = start + 4;
+  for (let i = 0; i < n; i++) {
+    if (p + 8 > end) return null;
+    const klen = dv.getUint32(p, true); p += 4;
+    if (p + klen > end) return null;
+    p += klen;
+    const vlen = dv.getUint32(p, true); p += 4;
+    if (p + vlen > end) return null;
+    p += vlen;
+  }
+  if (p !== end) return null; // 必须精确耗尽, 否则当成字符串
+  const { dict } = readDict(dv, u8, start, end, depth);
+  return dict;
+}
+
+// 读取 DICT: int32 numItems; 每项 int32 keyLen + key(str) + int32 valLen + val.
+// val 通常是字符串, 但 MagicaVoxel 的 _f 关键帧块里 val 是嵌套 DICT — 自动识别并递归解析.
+function readDict(dv, u8, off, end, depth = 0) {
   let p = off;
   const num = dv.getUint32(p, true); p += 4;
   const dict = {};
@@ -32,8 +54,22 @@ function readDict(dv, u8, off, end) {
     for (let j = 0; j < klen; j++) key += String.fromCharCode(u8[p + j]);
     p += klen;
     const vlen = dv.getUint32(p, true); p += 4;
-    let val = '';
-    for (let j = 0; j < vlen; j++) val += String.fromCharCode(u8[p + j]);
+    const vstart = p;
+    let val;
+    if (depth < 4) {
+      const nested = tryParseNestedDict(dv, u8, vstart, vstart + vlen, depth + 1);
+      if (nested) {
+        val = nested;
+      } else {
+        let s = '';
+        for (let j = 0; j < vlen; j++) s += String.fromCharCode(u8[vstart + j]);
+        val = s;
+      }
+    } else {
+      let s = '';
+      for (let j = 0; j < vlen; j++) s += String.fromCharCode(u8[vstart + j]);
+      val = s;
+    }
     p += vlen;
     dict[key] = val;
   }
@@ -140,6 +176,7 @@ export function parseVox(input) {
   const nodes = {};          // id -> {type, ...}
   const materials = {};       // id -> material props
   let declaredModels = 0;
+  let frameCount = 1;        // 时间轴帧数; 无动画文件默认为 1
 
   function parseChildren(start, end) {
     let p = start;
@@ -156,6 +193,10 @@ export function parseVox(input) {
         parseChildren(childStart, childEnd);
       } else if (id === 'PACK') {
         declaredModels = dv.getUint32(contentStart, true);
+      } else if (id === 'FRAM') {
+        // 时间轴总帧数: dict._f = 帧数
+        const { dict } = readDict(dv, u8, contentStart, contentEnd);
+        frameCount = dict._f !== undefined ? (parseInt(dict._f, 10) || 1) : 1;
       } else if (id === 'SIZE') {
         const sx = dv.getUint32(contentStart, true);
         const sy = dv.getUint32(contentStart + 4, true);
@@ -193,6 +234,22 @@ export function parseVox(input) {
         q += 4; // reserved (deprecated, 恒 0)
         const t = readDict(dv, u8, q, contentEnd);
         const td = t.dict;
+        // 动画关键帧: 变换 dict 含嵌套 _f 块 { _f:帧数, _t:平移串, _r:旋转串, _p:枢轴串 }
+        let keyframes = null;
+        if (td._f && typeof td._f === 'object') {
+          const fc = parseInt(td._f._f, 10) || 1;
+          const ts = (td._f._t || '').trim().split(/\s+/).filter(Boolean).map(Number);
+          const rs = (td._f._r || '').trim().split(/\s+/).filter(Boolean).map(Number);
+          const ps = (td._f._p || '').trim().split(/\s+/).filter(Boolean).map(Number);
+          keyframes = [];
+          for (let k = 0; k < fc; k++) {
+            keyframes.push({
+              translation: [ts[k * 3] || 0, ts[k * 3 + 1] || 0, ts[k * 3 + 2] || 0],
+              rotation: rs[k] || 0,
+              pivot: [ps[k * 3] || 0, ps[k * 3 + 1] || 0, ps[k * 3 + 2] || 0],
+            });
+          }
+        }
         nodes[nodeId] = {
           type: 'transform',
           child: childNodeId,
@@ -200,6 +257,7 @@ export function parseVox(input) {
           hidden: a.dict._hidden === '1',
           translation: readVec3(td._t),
           rotation: td._r !== undefined ? (parseInt(td._r, 10) || 0) : 0,
+          keyframes,
         };
       } else if (id === 'nGRP') {
         const nodeId = dv.getUint32(contentStart, true);
@@ -230,12 +288,22 @@ export function parseVox(input) {
   const M = dv.getUint32(16, true);
   parseChildren(20, 20 + M);
 
-  const scene = buildScene(nodes, models.length);
-  return { version, models, palette, scene, materials };
+  // 若某些节点带了关键帧但 FRAM 块缺失, 以最长关键帧为准
+  for (const id in nodes) {
+    const n = nodes[id];
+    if (n.type === 'transform' && n.keyframes && n.keyframes.length > frameCount) {
+      frameCount = n.keyframes.length;
+    }
+  }
+
+  const scene = buildScene(nodes, models.length, frameCount);
+  return { version, models, palette, scene, materials, frameCount };
 }
 
-// 从节点图算出每个 shape 的世界变换, 输出 scene 实例数组.
-function buildScene(nodes, modelCount) {
+// 从节点图算出每个 shape 的逐帧世界变换, 输出 scene 实例数组.
+// 每个实例带 frames[frameCount] = { translation, rotation } (每帧世界变换);
+// 静态文件 (frameCount===1) 不附加 frames 键, 保持向后兼容.
+function buildScene(nodes, modelCount, frameCount) {
   const parents = {};
   for (const id in nodes) {
     const n = nodes[id];
@@ -252,40 +320,75 @@ function buildScene(nodes, modelCount) {
     while (cur !== undefined) { path.push(cur); cur = parents[cur]; }
     path.reverse();
 
-    let cumR = ROTATION_MATRICES[0]; // identity
-    let cumT = [0, 0, 0];
+    // hidden / name / hasAnim 与帧无关, 先遍历一次确定
     let hidden = false;
     let name = '';
+    let hasAnim = false;
     for (const nid of path) {
       const n = nodes[nid];
       if (!n) continue;
       if (n.type === 'transform') {
-        cumT = [
-          cumT[0] + matVec3(cumR, n.translation)[0],
-          cumT[1] + matVec3(cumR, n.translation)[1],
-          cumT[2] + matVec3(cumR, n.translation)[2],
-        ];
-        cumR = matMul3(cumR, ROTATION_MATRICES[n.rotation] || ROTATION_MATRICES[0]);
         if (n.hidden) hidden = true;
         if (n.name) name = n.name;
+        if (n.keyframes && n.keyframes.length) hasAnim = true;
       } else if (n.type === 'shape') {
-        const off = n.offset || [0, 0, 0];
-        cumT = [
-          cumT[0] + matVec3(cumR, off)[0],
-          cumT[1] + matVec3(cumR, off)[1],
-          cumT[2] + matVec3(cumR, off)[2],
-        ];
         if (n.name) name = n.name;
       } else if (n.type === 'group') {
         if (n.name) name = n.name;
       }
     }
+
+    const frames = [];
+    for (let f = 0; f < frameCount; f++) {
+      let cumR = ROTATION_MATRICES[0]; // identity
+      let cumT = [0, 0, 0];
+      for (const nid of path) {
+        const n = nodes[nid];
+        if (!n) continue;
+        if (n.type === 'transform') {
+          // 取该帧的变换 (无关键帧用静态值; 关键帧越界夹到末帧)
+          const kf = n.keyframes && n.keyframes.length
+            ? n.keyframes[Math.min(f, n.keyframes.length - 1)]
+            : { translation: n.translation, rotation: n.rotation, pivot: [0, 0, 0] };
+          const p = kf.pivot || [0, 0, 0];
+          const R = ROTATION_MATRICES[kf.rotation] || ROTATION_MATRICES[0];
+          // 枢轴合成: 平移增量 tInc = p + R·(-p); 整体平移 = cumT + cumR·(tInc + kf.translation)
+          const rp = matVec3(R, [-p[0], -p[1], -p[2]]);
+          const tInc = [p[0] + rp[0], p[1] + rp[1], p[2] + rp[2]];
+          const tLocal = [
+            tInc[0] + (kf.translation[0] || 0),
+            tInc[1] + (kf.translation[1] || 0),
+            tInc[2] + (kf.translation[2] || 0),
+          ];
+          cumT = [
+            cumT[0] + matVec3(cumR, tLocal)[0],
+            cumT[1] + matVec3(cumR, tLocal)[1],
+            cumT[2] + matVec3(cumR, tLocal)[2],
+          ];
+          cumR = matMul3(cumR, R);
+        } else if (n.type === 'shape') {
+          const off = n.offset || [0, 0, 0];
+          cumT = [
+            cumT[0] + matVec3(cumR, off)[0],
+            cumT[1] + matVec3(cumR, off)[1],
+            cumT[2] + matVec3(cumR, off)[2],
+          ];
+        }
+      }
+      frames.push({
+        translation: cumT.map((v) => Math.round(v)),
+        rotation: rotationIndex(cumR),
+      });
+    }
+
     instances.push({
       modelIndex: nodes[id].modelId,
-      translation: cumT.map((v) => Math.round(v)),
-      rotation: rotationIndex(cumR),
-      hidden: hidden,
-      name: name,
+      translation: frames[0].translation,
+      rotation: frames[0].rotation,
+      hidden,
+      name,
+      // 仅当路径上真的有关键帧节点才附加 frames, 保持静态文件(及动画里的静态对象)无损
+      frames: hasAnim ? frames : undefined,
     });
   }
 

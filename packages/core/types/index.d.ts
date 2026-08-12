@@ -24,6 +24,8 @@ export interface SceneInstance {
   rotation: number;
   hidden: boolean;
   name: string;
+  /** 逐帧世界变换; 仅动画文件(且本实例确有关键帧)存在 */
+  frames?: { translation: [number, number, number]; rotation: number }[];
 }
 
 /** MATL 块解析结果; 仅 chunk 中实际出现的字段会被包含 */
@@ -51,12 +53,16 @@ export interface ParseVoxResult {
   scene: SceneInstance[];
   /** 索引即调色板颜色索引; 无 MATL 时为 {} */
   materials: Record<number, Material>;
+  /** 时间轴总帧数; 无动画文件为 1 */
+  frameCount: number;
 }
 
 export interface SceneData {
   models: VoxelModel[];
   scene?: SceneInstance[];
   materials?: Record<number, Material>;
+  /** 时间轴总帧数; 省略时由 scene 中 frames 的最大长度推断 */
+  frameCount?: number;
 }
 
 export class VoxelGrid {

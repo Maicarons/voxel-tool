@@ -10,6 +10,12 @@
 //   2) 多实例场景:        传 `instances`(数组, 每个含 voxels + 世界变换 translation/rotation),
 //      配合 `parseVox` 返回的 `scene` 使用, 正确还原 MagicaVoxel 的多模型/变换布局.
 //   `materials`(来自 parseVox 的 MATL) 会让对应体素用 MeshStandardMaterial 渲染金属/粗糙/透明/自发光.
+//
+// 动画 (P3): instances 可带 `frames`(逐帧世界变换 [{translation, rotation}]); 查看器提供
+//   play()/pause()/stop()/setFrame()/setLoop()/setFrameRate()/isPlaying()/getFrameCount() 播放控制.
+//
+// 渲染后端: 默认 WebGL (`renderer:'webgl'`); 指定 `renderer:'webgpu'` 会尝试 WebGPURenderer
+//   (动态 import three/webgpu), 不可用时自动回退 WebGL, 不影响默认路径.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { parseVox, ROTATION_MATRICES } from '@voxel-tool/core';
@@ -23,19 +29,27 @@ const DEFAULT_BG = '#16181e';
  * @param {object} [options]
  * @param {ArrayBuffer|Uint8Array} [options.src] .vox 二进制 (单模型时用)
  * @param {{size:number[],voxels:object[]}} [options.model] 已解析模型 (单模型时用)
- * @param {Array} [options.instances] 多实例: [{ voxels, translation?, rotation?, hidden?, name? }]
+ * @param {Array} [options.instances] 多实例: [{ voxels, translation?, rotation?, hidden?, name?, frames? }]
+ *   frames 为逐帧世界变换 [{translation, rotation}], 存在即启用动画播放
  * @param {number[][]} [options.palette] 256 项 [r,g,b,a]
  * @param {object} [options.materials] { id: { type, metalness, roughness, alpha, emissive } }
  * @param {string} [options.background]
  * @param {number} [options.width]
  * @param {number} [options.height]
  * @param {(info: [number, number]|null) => void} [options.onInfo]
+ * @param {'webgl'|'webgpu'} [options.renderer] 渲染后端, 默认 webgl
+ * @param {number} [options.frameRate] 动画帧率(fps), 默认 12
+ * @param {boolean} [options.loop] 动画是否循环, 默认 true
+ * @param {(frame: number) => void} [options.onFrame] 每帧切换回调
  */
 export function createVoxelViewer(container, options = {}) {
   if (typeof window === 'undefined' || !container) {
     throw new Error('createVoxelViewer 需要浏览器环境与有效的容器元素');
   }
-  const opts = { background: DEFAULT_BG, width: 480, height: 480, onInfo: null, ...options };
+  const opts = {
+    background: DEFAULT_BG, width: 480, height: 480, onInfo: null,
+    renderer: 'webgl', frameRate: 12, loop: true, onFrame: null, ...options,
+  };
 
   const w = container.clientWidth || opts.width;
   const h = container.clientHeight || opts.height;
@@ -49,10 +63,55 @@ export function createVoxelViewer(container, options = {}) {
   scene.add(sceneRoot);
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-  renderer.setSize(w, h);
-  container.appendChild(renderer.domElement);
+
+  // 渲染器: 默认 WebGL 同步创建; 若请求 webgpu 则异步创建并热替换 (失败回退 WebGL).
+  let renderer;
+  let rendererReady = true;
+  let controls;
+
+  function makeControls() {
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+  }
+
+  function setupWebGL() {
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(w, h);
+    container.appendChild(renderer.domElement);
+    makeControls();
+  }
+
+  if (opts.renderer === 'webgpu') {
+    // 先放一个 WebGL 占位以便布局/尺寸就绪, 随后异步尝试 WebGPU 热替换.
+    setupWebGL();
+    rendererReady = false;
+    import('three/webgpu')
+      .then(({ WebGPURenderer }) => {
+        const r = new WebGPURenderer({ antialias: true });
+        return r.init().then(() => {
+          r.setPixelRatio(renderer.getPixelRatio());
+          const cw = renderer.domElement.clientWidth || w;
+          const ch = renderer.domElement.clientHeight || h;
+          r.setSize(cw, ch);
+          if (renderer.domElement.parentNode === container) {
+            container.replaceChild(r.domElement, renderer.domElement);
+          }
+          controls.dispose();
+          renderer.dispose();
+          renderer = r;
+          makeControls();
+          rendererReady = true;
+        });
+      })
+      .catch((e) => {
+        console.warn('[voxel-tool] WebGPU 不可用, 回退 WebGL:', e);
+        rendererReady = true;
+      });
+  } else {
+    setupWebGL();
+  }
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x404050, 1.05));
   const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
@@ -62,11 +121,15 @@ export function createVoxelViewer(container, options = {}) {
   fillLight.position.set(-1.5, -2, -2.5);
   scene.add(fillLight);
 
-  const controls = new OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-
   let meshes = []; // { mesh, geometry, material }
+  let animatedMeshes = []; // { mesh, frames: [{translation, rotation}] }
+  let frameCount = 1;
+  let currentFrame = 0;
+  let playing = false;
+  let loop = !!opts.loop;
+  let fps = Math.max(1, opts.frameRate || 12);
+  let playhead = 0; // 秒
+  let lastNow = 0;
   let raf = 0;
 
   function disposeMeshes() {
@@ -77,18 +140,23 @@ export function createVoxelViewer(container, options = {}) {
       else m.material.dispose();
     }
     meshes = [];
+    animatedMeshes = [];
   }
 
-  function addInstance(voxels, palette, materials, translation, rotation, hidden) {
-    if (hidden) return;
+  function worldMatrix(translation, rotation) {
     const t = translation || [0, 0, 0];
     const R = ROTATION_MATRICES[rotation] || ROTATION_MATRICES[0];
-    const m4 = new THREE.Matrix4().set(
+    return new THREE.Matrix4().set(
       R[0], R[1], R[2], t[0],
       R[3], R[4], R[5], t[1],
       R[6], R[7], R[8], t[2],
       0, 0, 0, 1,
     );
+  }
+
+  function addInstance(voxels, palette, materials, translation, rotation, hidden, frames) {
+    if (hidden) return;
+    const m4 = worldMatrix(translation, rotation);
 
     const useMaterials = materials && Object.keys(materials).length > 0;
     const groups = useMaterials
@@ -102,7 +170,18 @@ export function createVoxelViewer(container, options = {}) {
       mesh.matrix.copy(m4);
       sceneRoot.add(mesh);
       meshes.push({ mesh, geometry: g.geometry, material: mat });
+      if (frames && frames.length > 1) animatedMeshes.push({ mesh, frames });
     }
+  }
+
+  function applyFrame(f) {
+    const fi = ((Math.floor(f) % frameCount) + frameCount) % frameCount;
+    currentFrame = fi;
+    for (const a of animatedMeshes) {
+      const fr = a.frames[Math.min(fi, a.frames.length - 1)];
+      a.mesh.matrix.copy(worldMatrix(fr.translation, fr.rotation));
+    }
+    opts.onFrame?.(fi);
   }
 
   function fitCamera() {
@@ -134,7 +213,7 @@ export function createVoxelViewer(container, options = {}) {
 
     if (input.instances && input.instances.length) {
       for (const inst of input.instances) {
-        addInstance(inst.voxels, palette, materials, inst.translation, inst.rotation, inst.hidden);
+        addInstance(inst.voxels, palette, materials, inst.translation, inst.rotation, inst.hidden, inst.frames);
       }
     } else {
       let m = input.model;
@@ -144,8 +223,16 @@ export function createVoxelViewer(container, options = {}) {
         if (palette === undefined) input.palette = info.palette;
       }
       if (!m) { opts.onInfo?.(null); return; }
-      addInstance(m.voxels, palette, materials, [0, 0, 0], 0, false);
+      addInstance(m.voxels, palette, materials, [0, 0, 0], 0, false, null);
     }
+
+    // 帧数: 取最长动画轨道
+    frameCount = 1;
+    for (const a of animatedMeshes) frameCount = Math.max(frameCount, a.frames.length);
+    currentFrame = 0;
+    playing = false;
+    playhead = 0;
+    applyFrame(0);
 
     fitCamera();
     let voxelCount = 0;
@@ -163,6 +250,19 @@ export function createVoxelViewer(container, options = {}) {
 
   const animate = () => {
     raf = requestAnimationFrame(animate);
+    if (!rendererReady) return;
+    if (playing && frameCount > 1) {
+      const now = performance.now();
+      const dt = lastNow ? (now - lastNow) / 1000 : 0;
+      lastNow = now;
+      playhead += dt;
+      let f = Math.floor(playhead * fps);
+      if (f >= frameCount) {
+        if (loop) { f = f % frameCount; playhead = f / fps; }
+        else { f = frameCount - 1; playing = false; }
+      }
+      applyFrame(f);
+    }
     controls.update();
     renderer.render(scene, camera);
   };
@@ -182,6 +282,37 @@ export function createVoxelViewer(container, options = {}) {
     },
     setBackground(color) {
       scene.background = new THREE.Color(color);
+    },
+    // —— 动画播放控制 (P3) ——
+    play() {
+      if (frameCount <= 1) return;
+      playing = true;
+      lastNow = performance.now();
+    },
+    pause() {
+      playing = false;
+    },
+    stop() {
+      playing = false;
+      playhead = 0;
+      applyFrame(0);
+    },
+    setFrame(i) {
+      playing = false;
+      playhead = Math.max(0, i) / fps;
+      applyFrame(i);
+    },
+    setLoop(b) {
+      loop = !!b;
+    },
+    setFrameRate(rate) {
+      fps = Math.max(1, rate || 12);
+    },
+    isPlaying() {
+      return playing;
+    },
+    getFrameCount() {
+      return frameCount;
     },
     dispose() {
       cancelAnimationFrame(raf);

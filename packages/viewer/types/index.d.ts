@@ -3,6 +3,11 @@
 import type * as THREE from 'three';
 import type { RGBA, Material, Voxel, VoxelModel } from '@voxel-tool/core';
 
+export interface ViewerFrame {
+  translation: [number, number, number];
+  rotation: number;
+}
+
 export interface ViewerInstanceOptions {
   src?: ArrayBuffer | Uint8Array;
   model?: VoxelModel;
@@ -12,6 +17,8 @@ export interface ViewerInstanceOptions {
     rotation?: number;
     hidden?: boolean;
     name?: string;
+    /** 逐帧世界变换; 存在即启用动画播放 */
+    frames?: ViewerFrame[];
   }>;
   palette?: RGBA[] | null;
   materials?: Record<number, Material>;
@@ -19,6 +26,14 @@ export interface ViewerInstanceOptions {
   width?: number;
   height?: number;
   onInfo?: ((info: [number, number] | null) => void) | null;
+  /** 渲染后端: 'webgl'(默认) | 'webgpu'(不可用时自动回退 webgl) */
+  renderer?: 'webgl' | 'webgpu';
+  /** 动画帧率 fps, 默认 12 */
+  frameRate?: number;
+  /** 动画是否循环, 默认 true */
+  loop?: boolean;
+  /** 每帧切换回调 */
+  onFrame?: ((frame: number) => void) | null;
 }
 
 export interface ViewerUpdateInput {
@@ -32,6 +47,22 @@ export interface ViewerUpdateInput {
 export interface VoxelViewer {
   update(input?: ViewerUpdateInput): void;
   setBackground(color: string): void;
+  /** 开始播放动画 (仅当帧数 > 1) */
+  play(): void;
+  /** 暂停在当前帧 */
+  pause(): void;
+  /** 停止并回到第 0 帧 */
+  stop(): void;
+  /** 跳转到指定帧 (并暂停) */
+  setFrame(i: number): void;
+  /** 设置是否循环 */
+  setLoop(b: boolean): void;
+  /** 设置帧率 fps */
+  setFrameRate(fps: number): void;
+  /** 当前是否正在播放 */
+  isPlaying(): boolean;
+  /** 总帧数 (无动画为 1) */
+  getFrameCount(): number;
   dispose(): void;
 }
 
