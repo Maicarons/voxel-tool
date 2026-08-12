@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/solid",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "SolidJS 3D viewer component for MagicaVoxel .vox models (built on @voxel-tool/viewer + Three.js)",
   "type": "module",
   "main": "dist/index.js",
@@ -27,8 +27,8 @@
     "solid-js": "^1.8.0"
   },
   "dependencies": {
-    "@voxel-tool/core": "^0.2.0",
-    "@voxel-tool/viewer": "^0.3.0"
+    "@voxel-tool/core": "^0.3.0",
+    "@voxel-tool/viewer": "^0.4.0"
   },
   "devDependencies": {
     "vite": "^7.0.0",

@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/cli",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Command-line voxel exporter — convert MagicaVoxel .vox files to GLTF/GLB/OBJ/STL/PLY/USDZ/FBX headlessly in Node (no browser required)",
   "type": "module",
   "bin": {
@@ -14,8 +14,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@voxel-tool/core": "^0.2.0",
-    "@voxel-tool/exporter": "^0.3.0"
+    "@voxel-tool/core": "^0.3.0",
+    "@voxel-tool/exporter": "^0.4.0"
   },
   "devDependencies": {
     "vitest": "^4.1.10"
