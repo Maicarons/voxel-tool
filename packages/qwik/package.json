@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/qwik",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Qwik 3D viewer component for MagicaVoxel .vox models (built on @voxel-tool/viewer + Three.js)",
   "type": "module",
   "main": "dist/index.js",
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "@voxel-tool/core": "^0.2.0",
-    "@voxel-tool/viewer": "^0.2.0"
+    "@voxel-tool/viewer": "^0.3.0"
   },
   "devDependencies": {
     "@builder.io/qwik": "^1.20.0",

@@ -9,7 +9,7 @@
 // y-up, 与 viewer 完全对齐, 保证 Blender/Unity 里模型「立着」且颜色正确。
 import * as THREE from 'three';
 import { ROTATION_MATRICES, defaultPalette } from '@voxel-tool/core';
-import { buildVoxelGeometry, buildVoxelBuckets, makeMaterial } from './geometry.js';
+import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from './geometry.js';
 
 /**
  * 把各种输入归一化成统一结构:
@@ -87,8 +87,8 @@ export function buildExportObject(input) {
     m4.decompose(pos, quat, scl);
 
     const groups = hasMaterials
-      ? buildVoxelBuckets(inst.voxels, palette, materials)
-      : [{ geometry: buildVoxelGeometry(inst.voxels, palette), materialId: 0 }];
+      ? buildVoxelBucketsGreedy(inst.voxels, palette, materials)
+      : [{ geometry: buildVoxelGeometryGreedy(inst.voxels, palette), materialId: 0 }];
 
     for (const g of groups) {
       const mat = makeMaterial(g.materialId, materials);

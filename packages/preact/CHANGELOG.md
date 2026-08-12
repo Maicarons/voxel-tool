@@ -1,5 +1,12 @@
 # @voxel-tool/preact
 
+## 0.4.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @voxel-tool/viewer@0.3.0
+
 ## 0.4.0
 
 ### Minor Changes

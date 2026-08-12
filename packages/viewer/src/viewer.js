@@ -13,7 +13,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { parseVox, ROTATION_MATRICES } from '@voxel-tool/core';
-import { buildVoxelGeometry, buildVoxelBuckets, makeMaterial } from './mesh.js';
+import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from './mesh.js';
 
 const DEFAULT_BG = '#16181e';
 
@@ -92,8 +92,8 @@ export function createVoxelViewer(container, options = {}) {
 
     const useMaterials = materials && Object.keys(materials).length > 0;
     const groups = useMaterials
-      ? buildVoxelBuckets(voxels, palette, materials)
-      : [{ geometry: buildVoxelGeometry(voxels, palette), materialId: 0 }];
+      ? buildVoxelBucketsGreedy(voxels, palette, materials)
+      : [{ geometry: buildVoxelGeometryGreedy(voxels, palette), materialId: 0 }];
 
     for (const g of groups) {
       const mat = makeMaterial(g.materialId, materials);

@@ -57,6 +57,20 @@ export function buildVoxelBuckets(
   materials: Record<number, Material> | undefined,
 ): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
 
+/** Greedy meshing 变体: 共面同色相邻暴露面合并为最大矩形 (P3.2)。
+ *  暴露面多重集与朴素版完全一致, 仅几何更紧凑 (三角面数趋近表面积量级)。 */
+export function buildVoxelGeometryGreedy(
+  voxels: Voxel[],
+  palette: RGBA[] | null,
+): THREE.BufferGeometry;
+
+/** 按材质分桶的 greedy 变体 (P3.2) */
+export function buildVoxelBucketsGreedy(
+  voxels: Voxel[],
+  palette: RGBA[] | null,
+  materials: Record<number, Material> | undefined,
+): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
+
 /** 根据材质 id 生成 three 材质 (id=0 -> Lambert 顶点色; 否则 Standard) */
 export function makeMaterial(
   materialId: number,

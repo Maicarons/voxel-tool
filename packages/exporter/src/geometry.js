@@ -153,3 +153,149 @@ export function makeMaterial(materialId, materials) {
   if (m.ior) mat.ior = m.ior;
   return mat;
 }
+
+// ===========================================================================
+// Greedy meshing (P3.2)
+// 与 viewer/src/mesh.js 同源算法；颜色走 pushLinearColor (sRGB->linear), 与朴素版一致。
+// 把共面、同色、相邻的暴露面合并成最大矩形, 大幅减少大场景三角形数量。
+// ===========================================================================
+
+const AXIS_U = [1, 2, 0]; // 对每个轴 dim，定义另外两个轴的排列 (u, v)
+const AXIS_V = [2, 0, 1];
+
+function computeVoxelBounds(voxels) {
+  let xMin = Infinity, yMin = Infinity, zMin = Infinity;
+  let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity;
+  for (const v of voxels) {
+    if (v.x < xMin) xMin = v.x; if (v.x > xMax) xMax = v.x;
+    if (v.y < yMin) yMin = v.y; if (v.y > yMax) yMax = v.y;
+    if (v.z < zMin) zMin = v.z; if (v.z > zMax) zMax = v.z;
+  }
+  return { min: [xMin, yMin, zMin], dims: [xMax - xMin + 1, yMax - yMin + 1, zMax - zMin + 1] };
+}
+
+function buildVoxelGrid(voxels, palette) {
+  const { min, dims } = computeVoxelBounds(voxels);
+  const [xMin, yMin, zMin] = min;
+  const present = new Set();  // 所有体素(含透明)
+  const colorOf = new Map();  // 可见体素(grid key) -> palette index i
+  for (const v of voxels) {
+    const k = (v.x - xMin) + ',' + (v.y - yMin) + ',' + (v.z - zMin);
+    present.add(k);
+    const col = palette ? palette[v.i] : null;
+    if (col && col[3] !== 0) colorOf.set(k, v.i);
+  }
+  return { present, colorOf, min, dims };
+}
+
+const gkey = (a, b, c) => a + ',' + b + ',' + c;
+
+// 生成 greedy quad 列表。每个 quad: { f 面索引, w 切片, u, v 网格下界, du, dv 尺寸, i 颜色 }
+function emitGreedyQuads(voxels, palette) {
+  if (!voxels.length) return { quads: [], min: [0, 0, 0] };
+  const { present, colorOf, min, dims } = buildVoxelGrid(voxels, palette);
+  const quads = [];
+  for (let dim = 0; dim < 3; dim++) {
+    const u = AXIS_U[dim], v = AXIS_V[dim];
+    const sizeU = dims[u], sizeV = dims[v], sizeW = dims[dim];
+    for (let sign = 1; sign >= -1; sign -= 2) {
+      const f = dim * 2 + (sign > 0 ? 0 : 1);
+      for (let w = 0; w < sizeW; w++) {
+        const mask = new Int32Array(sizeU * sizeV).fill(-1);
+        for (let gu = 0; gu < sizeU; gu++) {
+          for (let gv = 0; gv < sizeV; gv++) {
+            const cx = [0, 0, 0];
+            cx[dim] = w; cx[u] = gu; cx[v] = gv;
+            const k = gkey(cx[0], cx[1], cx[2]);
+            const i = colorOf.get(k);
+            if (i === undefined) continue; // 体素透明/不存在 -> 无面
+            const nx = [cx[0], cx[1], cx[2]];
+            nx[dim] = w + sign;
+            if (present.has(gkey(nx[0], nx[1], nx[2]))) continue; // 邻居存在(含透明) -> 遮挡
+            mask[gu * sizeV + gv] = i;
+          }
+        }
+        const used = new Uint8Array(sizeU * sizeV);
+        for (let gv = 0; gv < sizeV; gv++) {
+          for (let gu = 0; gu < sizeU; gu++) {
+            const idx = gu * sizeV + gv;
+            if (mask[idx] < 0 || used[idx]) continue;
+            const color = mask[idx];
+            let du = 1;
+            while (gu + du < sizeU && mask[(gu + du) * sizeV + gv] === color && !used[(gu + du) * sizeV + gv]) du++;
+            let dv = 1;
+            grow: while (gv + dv < sizeV) {
+              for (let i = 0; i < du; i++) {
+                const ci = (gu + i) * sizeV + (gv + dv);
+                if (mask[ci] !== color || used[ci]) break grow;
+              }
+              dv++;
+            }
+            for (let j = 0; j < dv; j++) for (let i = 0; i < du; i++) used[(gu + i) * sizeV + (gv + j)] = 1;
+            quads.push({ f, w, u: gu, v: gv, du, dv, i: color });
+          }
+        }
+      }
+    }
+  }
+  return { quads, min };
+}
+
+function newArrays() {
+  return { positions: [], normals: [], colors: [], indices: [] };
+}
+
+function appendGreedyQuad(arrays, q, min, palette, pushColor) {
+  const f = q.f;
+  const dim = Math.floor(f / 2);
+  const u = AXIS_U[dim], v = AXIS_V[dim];
+  const n = FACES[f].n;
+  const col = palette ? palette[q.i] : null;
+  for (const corner of FACES[f].c) {
+    const gd = q.w + corner[dim];
+    const gu = q.u + (corner[u] > 0 ? q.du : 0) - 0.5;
+    const gv = q.v + (corner[v] > 0 ? q.dv : 0) - 0.5;
+    const coords = [0, 0, 0];
+    coords[dim] = gd; coords[u] = gu; coords[v] = gv;
+    arrays.positions.push(coords[0] + min[0], coords[1] + min[1], coords[2] + min[2]);
+    arrays.normals.push(n[0], n[1], n[2]);
+    pushColor(arrays.colors, col);
+  }
+  const base = arrays.positions.length / 3 - 4;
+  arrays.indices.push(base, base + 1, base + 2, base, base + 2, base + 3);
+}
+
+function arraysToGeometry(arrays) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(arrays.positions, 3));
+  geo.setAttribute('normal', new THREE.Float32BufferAttribute(arrays.normals, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(arrays.colors, 3));
+  geo.setIndex(arrays.indices);
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+  return geo;
+}
+
+export function buildVoxelGeometryGreedy(voxels, palette) {
+  const { quads, min } = emitGreedyQuads(voxels, palette);
+  const arrays = newArrays();
+  for (const q of quads) appendGreedyQuad(arrays, q, min, palette, pushLinearColor);
+  return arraysToGeometry(arrays);
+}
+
+export function buildVoxelBucketsGreedy(voxels, palette, materials) {
+  const { quads, min } = emitGreedyQuads(voxels, palette);
+  const hasMaterials = materials && Object.keys(materials).length > 0;
+  const buckets = new Map();
+  const getBucket = (mid) => {
+    if (!buckets.has(mid)) buckets.set(mid, newArrays());
+    return buckets.get(mid);
+  };
+  for (const q of quads) {
+    const mid = hasMaterials && materials[q.i] ? q.i : 0;
+    appendGreedyQuad(getBucket(mid), q, min, palette, pushLinearColor);
+  }
+  const out = [];
+  for (const [mid, b] of buckets) out.push({ geometry: arraysToGeometry(b), materialId: mid });
+  return out;
+}

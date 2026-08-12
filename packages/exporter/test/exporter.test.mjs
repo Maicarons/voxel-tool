@@ -2,6 +2,7 @@
 import { describe, test, expect } from 'vitest';
 import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette, defaultPalette } from '../../core/src/index.js';
 import { VoxelExporter, buildExportObject, exportModel, toUint8Array } from '../src/index.js';
+import { buildVoxelGeometry, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy } from '../src/geometry.js';
 import * as THREE from 'three';
 
 const pal = rainbowPalette();
@@ -42,7 +43,7 @@ describe('buildExportObject 朝向与结构', () => {
     expect(box.max.y).toBeLessThan(6);
   });
 
-  test('面剔除: 单个体素 -> 6 面; 2x2x2 实心 -> 24 面', () => {
+  test('面剔除: 单个体素 -> 6 面; 2x2x2 实心 -> 外壳 6 个大矩形 (greedy 合并)', () => {
     const single = buildExportObject({ model: { size: [1, 1, 1], voxels: [{ x: 0, y: 0, z: 0, i: 1 }] }, palette: pal });
     let faces = 0;
     single.traverse((o) => { if (o.isMesh) faces += o.geometry.index.count / 6; });
@@ -53,7 +54,8 @@ describe('buildExportObject 朝向与结构', () => {
     const cubeObj = buildExportObject({ model: { size: [2, 2, 2], voxels: cube }, palette: pal });
     faces = 0;
     cubeObj.traverse((o) => { if (o.isMesh) faces += o.geometry.index.count / 6; });
-    expect(faces).toBe(24);
+    // greedy 把 6 个外壳面各合并成 1 个矩形 (内部面已剔除); 不再是朴素的 24 个小面
+    expect(faces).toBe(6);
   });
 
   test('alpha=0 的调色板项不产生面', () => {
@@ -195,5 +197,167 @@ describe('vox 回写 (round-trip)', () => {
     const back = parseVox(bytes);
     expect(back.models.length).toBe(2);
     expect(back.scene.length).toBe(2);
+  });
+});
+
+// ===========================================================================
+// Greedy meshing 一致性测试 (P3.2) — exporter 侧的 geometry.js 实现
+// 与 viewer 同源算法; 颜色走 pushLinearColor (sRGB->linear), 但「暴露面 multiset」
+// 不变量与 viewer 完全一致, 这里复用同一套收敛校验。
+// ===========================================================================
+describe('buildVoxelGeometryGreedy 一致性 (P3.2)', () => {
+  const NEIGHBORS = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+
+  function presentSet(voxels) {
+    const s = new Set();
+    for (const v of voxels) s.add(`${v.x},${v.y},${v.z}`);
+    return s;
+  }
+  function enumerateFaces(voxels, palette) {
+    const present = presentSet(voxels);
+    const keys = [];
+    for (const v of voxels) {
+      const col = palette ? palette[v.i] : null;
+      if (!col || col[3] === 0) continue;
+      for (let f = 0; f < 6; f++) {
+        const [dx, dy, dz] = NEIGHBORS[f];
+        if (present.has(`${v.x + dx},${v.y + dy},${v.z + dz}`)) continue;
+        const dim = Math.floor(f / 2), sign = f % 2 === 0 ? 1 : -1;
+        keys.push(`${dim},${sign},${v.x},${v.y},${v.z}`);
+      }
+    }
+    return keys;
+  }
+  function geometryToFaceKeys(geo) {
+    const pos = geo.getAttribute('position');
+    const nor = geo.getAttribute('normal');
+    const idx = geo.index;
+    const keys = [];
+    for (let q = 0; q < idx.count; q += 6) {
+      const iv = [idx.getX(q), idx.getX(q + 1), idx.getX(q + 2), idx.getX(q + 3)];
+      const n = [nor.getX(iv[0]), nor.getY(iv[0]), nor.getZ(iv[0])];
+      const axis = n[0] !== 0 ? 0 : (n[1] !== 0 ? 1 : 2);
+      const sign = n[axis] > 0 ? 1 : -1;
+      const uAxis = axis === 0 ? 1 : (axis === 1 ? 2 : 0);
+      const vAxis = axis === 0 ? 2 : (axis === 1 ? 0 : 1);
+      const p = (i) => [pos.getX(i), pos.getY(i), pos.getZ(i)];
+      const w = Math.round(p(iv[0])[axis] - 0.5 * sign);
+      const gu = Math.round(Math.min(...iv.map((i) => p(i)[uAxis])));
+      const du = Math.round(Math.max(...iv.map((i) => p(i)[uAxis]))) - gu;
+      const gv = Math.round(Math.min(...iv.map((i) => p(i)[vAxis])));
+      const dv = Math.round(Math.max(...iv.map((i) => p(i)[vAxis]))) - gv;
+      for (let uu = gu; uu < gu + du; uu++) {
+        for (let vv = gv; vv < gv + dv; vv++) {
+          const vc = [0, 0, 0];
+          vc[axis] = w; vc[uAxis] = uu; vc[vAxis] = vv;
+          keys.push(`${axis},${sign},${vc[0]},${vc[1]},${vc[2]}`);
+        }
+      }
+    }
+    return keys;
+  }
+  function faceKeysEqual(greedyGeo, voxels, palette) {
+    return JSON.stringify(geometryToFaceKeys(greedyGeo).sort()) === JSON.stringify(enumerateFaces(voxels, palette).sort());
+  }
+  function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+  function randomVoxels(n, seed) {
+    const r = rng(seed); const out = []; const seen = new Set();
+    while (out.length < n) {
+      const x = Math.floor(r() * 12), y = Math.floor(r() * 12), z = Math.floor(r() * 12);
+      const k = `${x},${y},${z}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push({ x, y, z, i: 1 + (out.length % 4) });
+    }
+    return out;
+  }
+
+  test('单个体素 -> 6 暴露面 (greedy 与朴素覆盖一致)', () => {
+    const v = [{ x: 0, y: 0, z: 0, i: 1 }];
+    const g = buildVoxelGeometryGreedy(v, pal);
+    expect(g.index.count / 6).toBe(6);
+    expect(faceKeysEqual(g, v, pal)).toBe(true);
+  });
+
+  test('2×2×2 实心 -> 外壳 6 个大矩形 (覆盖 24 暴露面)', () => {
+    const cube = [];
+    for (let x = 0; x < 2; x++) for (let y = 0; y < 2; y++) for (let z = 0; z < 2; z++) cube.push({ x, y, z, i: 1 });
+    const g = buildVoxelGeometryGreedy(cube, pal);
+    expect(g.index.count / 6).toBe(6);
+    expect(faceKeysEqual(g, cube, pal)).toBe(true);
+  });
+
+  test('随机模型: greedy 覆盖 == 朴素暴露面 (不丢面/不加面/不错位)', () => {
+    for (let seed = 1; seed <= 16; seed++) {
+      const v = randomVoxels(80, seed);
+      const g = buildVoxelGeometryGreedy(v, pal);
+      expect(faceKeysEqual(g, v, pal), `seed=${seed}`).toBe(true);
+    }
+  });
+
+  test('大平板: greedy 三角数 <= 朴素', () => {
+    const slab = [];
+    for (let x = 0; x < 24; x++) for (let y = 0; y < 24; y++) slab.push({ x, y, z: 0, i: 2 });
+    const g = buildVoxelGeometryGreedy(slab, pal);
+    const gnaive = buildVoxelGeometry(slab, pal);
+    expect(g.index.count).toBeLessThanOrEqual(gnaive.index.count);
+    expect(g.index.count / 6).toBeLessThan(slab.length * 6);
+  });
+
+  test('多色相邻: greedy 不跨色合并', () => {
+    const v = [];
+    for (let x = 0; x < 10; x++) for (let y = 0; y < 10; y++) v.push({ x, y, z: 0, i: x < 5 ? 1 : 2 });
+    const g = buildVoxelGeometryGreedy(v, pal);
+    expect(faceKeysEqual(g, v, pal)).toBe(true);
+  });
+
+  test('buildVoxelBucketsGreedy: 各桶覆盖并集 == ground truth + 分桶正确', () => {
+    const materials = { 1: { type: '_metal' }, 2: { type: '_glass' } };
+    const v = [
+      { x: 0, y: 0, z: 0, i: 1 }, { x: 1, y: 0, z: 0, i: 1 },
+      { x: 2, y: 0, z: 0, i: 2 }, { x: 3, y: 0, z: 0, i: 3 },
+    ];
+    const buckets = buildVoxelBucketsGreedy(v, pal, materials);
+    let keys = [];
+    for (const b of buckets) {
+      const pos = b.geometry.getAttribute('position');
+      const nor = b.geometry.getAttribute('normal');
+      const idx = b.geometry.index;
+      for (let q = 0; q < idx.count; q += 6) {
+        const iv = [idx.getX(q), idx.getX(q + 1), idx.getX(q + 2), idx.getX(q + 3)];
+        const n = [nor.getX(iv[0]), nor.getY(iv[0]), nor.getZ(iv[0])];
+        const axis = n[0] !== 0 ? 0 : (n[1] !== 0 ? 1 : 2);
+        const sign = n[axis] > 0 ? 1 : -1;
+        const uAxis = axis === 0 ? 1 : (axis === 1 ? 2 : 0);
+        const vAxis = axis === 0 ? 2 : (axis === 1 ? 0 : 1);
+        const p = (i) => [pos.getX(i), pos.getY(i), pos.getZ(i)];
+        const w = Math.round(p(iv[0])[axis] - 0.5 * sign);
+        const gu = Math.round(Math.min(...iv.map((i) => p(i)[uAxis])));
+        const du = Math.round(Math.max(...iv.map((i) => p(i)[uAxis]))) - gu;
+        const gv = Math.round(Math.min(...iv.map((i) => p(i)[vAxis])));
+        const dv = Math.round(Math.max(...iv.map((i) => p(i)[vAxis]))) - gv;
+        for (let uu = gu; uu < gu + du; uu++) for (let vv = gv; vv < gv + dv; vv++) {
+          const vc = [0, 0, 0]; vc[axis] = w; vc[uAxis] = uu; vc[vAxis] = vv;
+          keys.push(`${axis},${sign},${vc[0]},${vc[1]},${vc[2]}`);
+        }
+      }
+    }
+    expect(keys.sort()).toEqual(enumerateFaces(v, pal).sort());
+    const ids = buckets.map((b) => b.materialId).sort((a, b) => a - b);
+    expect(ids).toEqual([0, 1, 2]);
+  });
+
+  test('greedy 与 naive 几何体顶点位置集合完全一致 (无坐标偏移)', () => {
+    const v = [];
+    for (let x = 0; x < 4; x++) for (let y = 0; y < 4; y++) for (let z = 0; z < 2; z++) v.push({ x, y, z, i: 1 + ((x + y + z) % 3) });
+    const g = buildVoxelGeometryGreedy(v, pal);
+    const gn = buildVoxelGeometry(v, pal);
+    const posKeys = (geo) => {
+      const pos = geo.getAttribute('position');
+      const ks = [];
+      for (let i = 0; i < pos.count; i++) ks.push(`${pos.getX(i).toFixed(3)},${pos.getY(i).toFixed(3)},${pos.getZ(i).toFixed(3)}`);
+      return ks.sort();
+    };
+    expect(posKeys(g)).toEqual(posKeys(gn));
   });
 });

@@ -19,8 +19,8 @@ export interface Material {
   ior?: number;
 }
 
-/** 支持的导出格式 */
-export type VoxelFormat = 'glb' | 'gltf' | 'obj' | 'stl' | 'ply' | 'usdz' | 'fbx';
+/** 支持的导出格式 (vox = 无损回写 MagicaVoxel, P3.3) */
+export type VoxelFormat = 'glb' | 'gltf' | 'obj' | 'stl' | 'ply' | 'usdz' | 'fbx' | 'vox';
 
 /** 单个体素: 坐标 + 调色板索引 */
 export interface Voxel {
@@ -104,6 +104,11 @@ export declare function buildVoxelBuckets(
   palette: RGBA[] | null,
   materials: Record<number, Material>,
 ): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
+/** 合并 + 面剔除 + 顶点色(sRGB->linear) 的 greedy meshing 变体 (P3.2)。
+ *  暴露面多重集与朴素版一致, 仅几何更紧凑。 */
+export declare function buildVoxelGeometryGreedy(voxels: Voxel[], palette: RGBA[] | null): THREE.BufferGeometry;
+/** 按材质分桶的 greedy 变体 (P3.2) */
+export declare function buildVoxelBucketsGreedy(voxels: Voxel[], palette: RGBA[] | null, materials: Record<number, Material>): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
 /** 根据材质 id 生成 three 材质 */
 export declare function makeMaterial(materialId: number, materials?: Record<number, Material>): THREE.Material;
 

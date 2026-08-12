@@ -37,7 +37,7 @@ export {
 };
 
 // 低层几何构建 (与 viewer 同算法, 带 sRGB->linear 修正)
-export { buildVoxelGeometry, buildVoxelBuckets, makeMaterial } from './geometry.js';
+export { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from './geometry.js';
 
 /**
  * 体素导出器: 把 VOX / 体素数据导出为通用 3D 格式。
@@ -60,7 +60,7 @@ export class VoxelExporter {
 
   /**
    * 导出为指定格式。
-   * @param {string} format 'glb'|'gltf'|'obj'|'stl'|'ply'|'usdz'|'fbx'
+   * @param {string} format 'glb'|'gltf'|'obj'|'stl'|'ply'|'usdz'|'fbx'|'vox'
    * @param {object} [options] 透传各 exporter + { binary?, filename? }
    * @returns {Promise<string|ArrayBuffer|Uint8Array|DataView>}
    */

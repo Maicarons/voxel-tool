@@ -1,6 +1,6 @@
 {
   "name": "@voxel-tool/exporter",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Voxel model exporter — convert .vox / voxel data to GLTF, GLB, OBJ, STL, PLY, USDZ and FBX (built on Three.js exporters)",
   "type": "module",
   "main": "dist/index.js",
