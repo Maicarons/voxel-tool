@@ -170,7 +170,7 @@ Features: click-to-paint / click-to-erase on a live 3D view (raycasting against 
 
 ## Documentation
 
-Full documentation (installation, usage, API, component examples, npm publishing) is available online: **https://maicarons.github.io/voxel-tool/**
+Full documentation (installation, usage, API, component examples) is available online: **https://maicarons.github.io/voxel-tool/**
 
 Source lives in **[docs/](docs/)** (VitePress).
 
@@ -179,10 +179,6 @@ Start the docs site locally:
 ```bash
 npm run docs:dev
 ```
-
-## Publishing to npm
-
-See [PUBLISHING.md](PUBLISHING.md) and [docs/guide/publishing](https://maicarons.github.io/voxel-tool/guide/publishing).
 
 ## License
 

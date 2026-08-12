@@ -1,6 +1,6 @@
 # @voxel-tool/exporter
 
-独立的体素模型**导出库**：把体素模型（`.vox` / 原始体素数据）导出为通用 3D 文件格式。底层基于 Three.js 内置导出器 + 第三方 FBX 写入器——**与其他 `@voxel-tool/*` 包并列发布**。
+独立的体素模型**导出库**：把体素模型（`.vox` / 原始体素数据）导出为通用 3D 文件格式。底层基于 Three.js 内置导出器 + 第三方 FBX 写入器——**随其他 `@voxel-tool/*` 包一同提供**。
 
 ```js
 import { VoxelExporter, FORMATS } from '@voxel-tool/exporter';

@@ -1,6 +1,6 @@
 # @voxel-tool/exporter
 
-A standalone export library that turns voxel models (`.vox` / raw voxel data) into general-purpose 3D file formats. Built on Three.js's built-in exporters plus a third-party FBX writer — **published alongside the other `@voxel-tool/*` packages**.
+A standalone export library that turns voxel models (`.vox` / raw voxel data) into general-purpose 3D file formats. Built on Three.js's built-in exporters plus a third-party FBX writer — **shipped alongside the other `@voxel-tool/*` packages**.
 
 ```js
 import { VoxelExporter, FORMATS } from '@voxel-tool/exporter';

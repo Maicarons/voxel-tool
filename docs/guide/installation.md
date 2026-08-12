@@ -2,7 +2,7 @@
 
 ## Use as a dependency
 
-Each package is published independently — install only what you need:
+The packages are independent — install only what you need:
 
 ```bash
 # Core library (read/write / palettes / grid)

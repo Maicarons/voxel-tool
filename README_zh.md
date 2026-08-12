@@ -170,7 +170,7 @@ npm run dev:editor     # -> http://localhost:5180
 
 ## 文档
 
-完整文档（安装、使用、API、组件示例、npm 发布方案）在线阅读：**https://maicarons.github.io/voxel-tool/**
+完整文档（安装、使用、API、组件示例）在线阅读：**https://maicarons.github.io/voxel-tool/**
 
 源码在 **[docs/](docs/)**（VitePress）。
 
@@ -179,10 +179,6 @@ npm run dev:editor     # -> http://localhost:5180
 ```bash
 npm run docs:dev
 ```
-
-## 发布到 npm
-
-见 [PUBLISHING.md](PUBLISHING.md) 与 [docs/guide/publishing.md](docs/guide/publishing.md)。
 
 ## License
 

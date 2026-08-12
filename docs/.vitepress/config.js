@@ -81,7 +81,6 @@ export default defineConfig({
             items: [
               { text: '安装', link: '/zh/guide/installation' },
               { text: '使用', link: '/zh/guide/usage' },
-              { text: '发布到 npm', link: '/zh/guide/publishing' },
             ],
           },
           {

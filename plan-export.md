@@ -1,9 +1,9 @@
 # 体素模型导出功能规划（OBJ / FBX / GLTF 等）
 
-> 状态：**已实现** —— 独立包 `@voxel-tool/exporter`（v0.2.0），与 core/viewer/框架组件并列发布到 npm。
+> 状态：**已实现** —— 独立包 `@voxel-tool/exporter`（v0.2.0），与 core/viewer/框架组件并列（同属 `@voxel-tool` 作用域）。
 > 实现位置：`packages/exporter/{src,build,formats,index}.js` + `types/index.d.ts` + `test/exporter.test.mjs`。
 > 相关代码：`packages/core`、`packages/viewer`、`apps/vox-editor`。
-> 研究方向已从「在 viewer 内加 exporters.js」调整为「独立导出包」（用户要求独立成包并与其他包并列上传 npm）。
+> 研究方向已从「在 viewer 内加 exporters.js」调整为「独立导出包」（用户要求独立成包，并与其他包同属 `@voxel-tool` 作用域）。
 
 ---
 
@@ -39,7 +39,7 @@
 
 ## 3. 设计方案（最终实现）
 
-> 2026-08-11 调整：不再在 viewer 内部加 `exporters.js`，而是**独立成包 `@voxel-tool/exporter`**，与其他 8 个包并列发布。
+> 2026-08-11 调整：不再在 viewer 内部加 `exporters.js`，而是**独立成包 `@voxel-tool/exporter`**，与其他包同属 `@voxel-tool` 作用域。
 
 ### 3.1 独立包 `packages/exporter`
 
