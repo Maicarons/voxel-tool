@@ -40,19 +40,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build documentation
-        run: npm run docs:build
-
-      # editor 依赖的 workspace 包 @voxel-tool/core / @voxel-tool/exporter 以 dist/ 暴露入口，
-      # 干净环境（npm ci）下 dist 不存在，必须先构建，否则 vite 解析入口失败。
-      - name: Build workspace dependency (@voxel-tool/core)
-        run: npm run build -w @voxel-tool/core
-
-      - name: Build workspace dependency (@voxel-tool/exporter)
-        run: npm run build -w @voxel-tool/exporter
-
-      - name: Build voxel editor
-        run: npm run build:editor
+      # 构建全部 workspace 包（按根 build 脚本的显式拓扑顺序：core→mesh→viewer→
+      # exporter→框架包→docs→editor）。干净环境（npm ci）下各包的 dist/ 不存在，
+      # 必须先全部构建，否则 vite 解析 @voxel-tool/* 入口失败（如 exporter 依赖 mesh）。
+      - name: Build all workspace packages
+        run: npm run build
 
       # 将编辑器构建产物作为子路径 /voxel-tool/editor/ 嵌入文档站
       - name: Embed editor into docs
