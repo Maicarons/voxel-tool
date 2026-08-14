@@ -104,6 +104,8 @@ const keyOf = (x: number, y: number, z: number) => `${x},${y},${z}`;
  */
 export class VoxelEditor {
   private container: HTMLElement;
+  /** 当前承载交互的画布 (WebGPU 热替换后会指向新画布, 指针监听器需随之迁移) */
+  private canvas: HTMLCanvasElement;
   private renderer: AnyRenderer;
   private backend: 'webgl' | 'webgpu' = 'webgl';
   /** WebGPU 热替换成功后才可用 (MeshStandardNodeMaterial), 用于 TSL 节点材质 */
@@ -170,12 +172,12 @@ export class VoxelEditor {
     canvas.style.display = 'block';
     canvas.style.touchAction = 'none';
     container.appendChild(canvas);
+    this.canvas = canvas;
 
     this.controls = new OrbitControls(this.camera, canvas);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.08;
-    this.controls.minDistance = 2;
-    this.controls.maxDistance = 2000;
+    this.applyControlConstraints(this.controls);
+
+    this.attachPointerListeners(this.canvas);
 
     this.initWebGPURenderer();
 
@@ -255,11 +257,11 @@ export class VoxelEditor {
       this.renderer = r as unknown as AnyRenderer;
       this.nodeMatClass = mod.MeshStandardNodeMaterial;
       this.backend = 'webgpu';
+      this.canvas = r.domElement;
       this.controls = new OrbitControls(this.camera, r.domElement);
-      this.controls.enableDamping = true;
-      this.controls.dampingFactor = 0.08;
-      this.controls.minDistance = 2;
-      this.controls.maxDistance = 2000;
+      this.applyControlConstraints(this.controls);
+      // 画布已热替换, 必须把指针监听迁移到新画布, 否则绘制/擦除点击失效
+      this.attachPointerListeners(this.canvas);
       this.cb.onBackend?.('webgpu');
       // 若已配置 TSL, 现在切换为 NodeMaterial 以应用 TSL 节点
       if (this.tsl) this.rebuildMeshes();
@@ -275,6 +277,29 @@ export class VoxelEditor {
   setTsl(opts: TslOptions | null) {
     this.tsl = opts;
     this.rebuildMeshes();
+  }
+
+  /**
+   * 统一配置 OrbitControls 约束 (构造与 WebGPU 热替换两处共用):
+   * - 禁用平移 -> 旋转中心 (target) 永远锁定在模型中心, 模型不会被拖出视野
+   * - 限制俯仰角到地平线以上 -> 不能翻到模型正下方, 避免"转出去/翻转"的眩晕
+   * - 降低旋转灵敏度 -> 一拖就甩出去的问题
+   */
+  private applyControlConstraints(c: OrbitControls) {
+    c.enableDamping = true;
+    c.dampingFactor = 0.08;
+    c.minDistance = 2;
+    c.maxDistance = 2000;
+    c.enablePan = false; // 锁定 target, 模型始终居中
+    c.rotateSpeed = 0.5; // 更细腻的旋转手感
+    c.minPolarAngle = 0.1; // 不完全正俯视, 避免万向锁
+    c.maxPolarAngle = Math.PI / 2 - 0.05; // 不能转到模型下方
+  }
+
+  /** 把绘制/擦除的指针监听挂到指定画布 (构造 + WebGPU 热替换后都要调用) */
+  private attachPointerListeners(canvas: HTMLCanvasElement) {
+    canvas.addEventListener('pointerdown', this.onPointerDown);
+    canvas.addEventListener('pointerup', this.onPointerUp);
   }
 
   private get grid(): VoxelGrid {
@@ -521,7 +546,7 @@ export class VoxelEditor {
     this.disposed = true;
     cancelAnimationFrame(this.rafId);
     this.resizeObserver.disconnect();
-    const canvas = this.renderer.domElement;
+    const canvas = this.canvas ?? this.renderer.domElement;
     canvas.removeEventListener('pointerdown', this.onPointerDown);
     canvas.removeEventListener('pointerup', this.onPointerUp);
     this.controls.dispose();

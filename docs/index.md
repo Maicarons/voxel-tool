@@ -29,7 +29,8 @@ hero:
 ---
 
 <div style="text-align:center">
-  <img src="/media/voxel-tool-promo.gif" alt="voxel-tool — 60-second project showcase" width="720"/>
+  <img src="/logo.png" alt="voxel-tool" width="160" style="margin-bottom:16px"/><br/>
+  <img src="/media/voxel-tool-p4.gif" alt="voxel-tool — What's new in P4" width="720"/>
 </div>
 
 ## What is this?

@@ -4,6 +4,7 @@ export default defineConfig({
   // GitHub Pages project-site subpath: https://maicarons.github.io/voxel-tool/
   base: '/voxel-tool/',
   title: 'voxel-tool',
+  favicon: '/voxel-tool/favicon.ico',
   description:
     'MagicaVoxel .vox read/write and voxel-model 3D viewer — core library + framework-agnostic viewer + React / Vue / Solid / Preact / Svelte / Qwik components',
   locales: {
@@ -26,6 +27,7 @@ export default defineConfig({
               { text: 'Usage', link: '/guide/usage' },
               { text: 'CLI', link: '/guide/cli' },
               { text: 'Publishing to npm', link: '/guide/publishing' },
+              { text: 'AI integration', link: '/guide/ai-integration' },
             ],
           },
           {
@@ -83,6 +85,7 @@ export default defineConfig({
               { text: '安装', link: '/zh/guide/installation' },
               { text: '使用', link: '/zh/guide/usage' },
               { text: '命令行工具', link: '/zh/guide/cli' },
+              { text: 'AI 集成', link: '/zh/guide/ai-integration' },
             ],
           },
           {
@@ -121,6 +124,7 @@ export default defineConfig({
     },
   },
   themeConfig: {
+    logo: '/voxel-tool/logo.png',
     socialLinks: [
       { icon: 'github', link: 'https://github.com/Maicarons/voxel-tool' },
     ],

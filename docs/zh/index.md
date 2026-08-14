@@ -29,7 +29,8 @@ hero:
 ---
 
 <div style="text-align:center">
-  <img src="/media/voxel-tool-promo.gif" alt="voxel-tool — 60 秒项目演示" width="720"/>
+  <img src="/logo.png" alt="voxel-tool" width="160" style="margin-bottom:16px"/><br/>
+  <img src="/media/voxel-tool-p4.gif" alt="voxel-tool — P4 新功能一览" width="720"/>
 </div>
 
 ## 这是什么？

@@ -1,5 +1,9 @@
 # voxel-tool
 
+<p align="center">
+  <img src="media/voxel-tool-logo.png" alt="voxel-tool" width="200"/>
+</p>
+
 [![CI](https://github.com/Maicarons/voxel-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/Maicarons/voxel-tool/actions/workflows/ci.yml)
 [![Docs](https://github.com/Maicarons/voxel-tool/actions/workflows/pages.yml/badge.svg)](https://maicarons.github.io/voxel-tool/)
 [![npm](https://img.shields.io/badge/npm-%40voxel--tool%2Fcore-blue)](https://www.npmjs.com/org/voxel-tool)
@@ -22,7 +26,7 @@ A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core li
 > The rendering follows mainstream `.vox` viewers (MagicaVoxel / `threejs-vox-loader` / coding.kiwi's *Rendering .vox Files*): every voxel is a real 3D cube correctly occluded by the WebGL depth buffer; only exposed faces are generated (face culling), and **greedy meshing** merges coplanar same-color faces so even solid models collapse to a handful of triangles and render instantly. All framework components share the single `@voxel-tool/viewer` implementation — no per-framework re-implementation of the renderer.
 
 <p align="center">
-  <img src="media/voxel-tool-promo.gif" alt="voxel-tool — 60-second project showcase" width="720"/>
+  <img src="media/voxel-tool-p4.gif" alt="voxel-tool — What's new in P4" width="720"/>
 </p>
 
 ---
@@ -184,6 +188,21 @@ Start the docs site locally:
 ```bash
 npm run docs:dev
 ```
+
+## AI integration (project skills)
+
+This repo ships a set of **project-level WorkBuddy skills** in [`.workbuddy/skills/`](.workbuddy/skills/) so an AI agent (or anyone using WorkBuddy) can call voxel-tool directly — convert files, run CSG, round-trip Minecraft schematics, read/write `.vox` from code, or embed a viewer. They are committed, so cloning the repo gives you the skills automatically.
+
+| Skill | What it does |
+|-------|--------------|
+| `voxel-tool` | **Router** — project overview + "which skill should I use" map. |
+| `voxel-export` | CLI `.vox`/`.schem` ↔ GLB/glTF/OBJ/STL/PLY/USDZ/FBX + reverse voxelize + Draco. |
+| `voxel-csg` | CLI boolean union / intersection / difference on voxel files. |
+| `voxel-schematic` | Minecraft `.schem` ↔ GLB/VOX round-trip. |
+| `voxel-core` | Programmatic `.vox` read/write, `VoxelGrid`, `voxelizeMesh`, palette. |
+| `voxel-viewer` | `createVoxelViewer` + React/Vue/Solid/Preact/Svelte/Qwik `VoxViewer`. |
+
+See the **[AI Integration guide](https://maicarons.github.io/voxel-tool/guide/ai-integration)** for triggers and examples.
 
 ## License
 

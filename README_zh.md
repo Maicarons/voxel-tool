@@ -1,5 +1,9 @@
 # voxel-tool
 
+<p align="center">
+  <img src="media/voxel-tool-logo.png" alt="voxel-tool" width="200"/>
+</p>
+
 [![CI](https://github.com/Maicarons/voxel-tool/actions/workflows/ci.yml/badge.svg)](https://github.com/Maicarons/voxel-tool/actions/workflows/ci.yml)
 [![Docs](https://github.com/Maicarons/voxel-tool/actions/workflows/pages.yml/badge.svg)](https://maicarons.github.io/voxel-tool/)
 [![npm](https://img.shields.io/badge/npm-%40voxel--tool%2Fcore-blue)](https://www.npmjs.com/org/voxel-tool)
@@ -22,7 +26,7 @@
 > 渲染原理参考主流 `.vox` viewer（MagicaVoxel / `threejs-vox-loader` / coding.kiwi 的 *Rendering .vox Files*）：每个体素是真实 3D 立方体，靠 WebGL 深度缓冲正确遮挡；只对暴露面生成几何（面剔除），再用 **greedy meshing** 合并共面同色面，连实心模型都能塌缩成寥寥几个三角形、秒级渲染。所有框架组件共享 `@voxel-tool/viewer` 同一份实现，不存在「每个框架重写一遍渲染」的重复代码。
 
 <p align="center">
-  <img src="media/voxel-tool-promo.gif" alt="voxel-tool — 60 秒项目演示" width="720"/>
+  <img src="media/voxel-tool-p4.gif" alt="voxel-tool — P4 新功能一览" width="720"/>
 </p>
 
 ---
@@ -184,6 +188,21 @@ npm run dev:editor     # -> http://localhost:5180
 ```bash
 npm run docs:dev
 ```
+
+## AI 集成（项目级技能）
+
+本仓库在 [`.workbuddy/skills/`](.workbuddy/skills/) 内置一套**项目级 WorkBuddy 技能**，让 AI 助手（或任何使用 WorkBuddy 的人）能直接调用 voxel-tool——转换文件、运行 CSG、与 Minecraft schematic 互转、用代码读写 `.vox`、或嵌入查看器。技能随仓库提交，克隆即可自动获得。
+
+| 技能 | 作用 |
+|------|------|
+| `voxel-tool` | **路由** —— 项目总览 + "该用哪个技能"决策表。 |
+| `voxel-export` | CLI `.vox`/`.schem` ↔ GLB/glTF/OBJ/STL/PLY/USDZ/FBX + 逆向体素化 + Draco。 |
+| `voxel-csg` | CLI 体素布尔运算（并 / 交 / 差）。 |
+| `voxel-schematic` | Minecraft `.schem` ↔ GLB/VOX 往返。 |
+| `voxel-core` | 编程式 `.vox` 读写、`VoxelGrid`、`voxelizeMesh`、调色板。 |
+| `voxel-viewer` | `createVoxelViewer` + React/Vue/Solid/Preact/Svelte/Qwik 的 `VoxViewer`。 |
+
+用法与触发示例见 **[AI 集成指南](https://maicarons.github.io/voxel-tool/zh/guide/ai-integration)**。
 
 ## License
 
