@@ -69,7 +69,27 @@ export interface ExportOptions {
   filename?: string;
   /** Blob 的 MIME (VoxelExporter.toBlob) */
   mime?: string;
+  /** 仅 glb/gltf: 为真时对导出 glTF 做 KHR_draco_mesh_compression 几何压缩 (P4.4) */
+  draco?: boolean;
+  /** draco:true 时的压缩参数 (方法/量化位数/速度) */
+  dracoOptions?: DracoCompressOptions;
   [key: string]: unknown;
+}
+
+/** Draco 几何压缩选项 (P4.4) */
+export interface DracoCompressOptions {
+  /** 'edgebreaker' 压缩比更高 (默认) | 'sequential' 保留顶点序 */
+  method?: 'edgebreaker' | 'sequential';
+  /** 位置量化位数 (默认 14) */
+  quantizePosition?: number;
+  /** 法线量化位数 (默认 10) */
+  quantizeNormal?: number;
+  /** 顶点色量化位数 (默认 8) */
+  quantizeColor?: number;
+  /** 编码速度 (默认 5) */
+  encodeSpeed?: number;
+  /** 解码速度 (默认 5) */
+  decodeSpeed?: number;
 }
 
 /** FBX 专属选项 */
@@ -111,7 +131,29 @@ export declare function buildVoxelGeometryGreedy(voxels: Voxel[], palette: RGBA[
 /** 按材质分桶的 greedy 变体 (P3.2) */
 export declare function buildVoxelBucketsGreedy(voxels: Voxel[], palette: RGBA[] | null, materials: Record<number, Material>, opts?: { colorSpace?: 'raw' | 'linear' }): Array<{ geometry: THREE.BufferGeometry; materialId: number }>;
 /** 根据材质 id 生成 three 材质 */
-export declare function makeMaterial(materialId: number, materials?: Record<number, Material>, opts?: { defaultMaterial?: 'lambert' | 'standard'; side?: THREE.Side }): THREE.Material;
+export declare function makeMaterial(materialId: number, materials?: Record<number, Material>, opts?: { defaultMaterial?: 'lambert' | 'standard'; side?: THREE.Side; nodeMaterialClass?: any; tsl?: TslOptions }): THREE.Material;
+
+/** TSL 描边 / 自发光增强选项 (mesh.applyVoxelTsl) */
+export interface TslOptions {
+  /** 是否启用 fresnel 边缘描边 (边缘辉光, 近似描边) */
+  outline?: boolean;
+  /** 描边颜色, 0..1 归一化 RGB (默认黑边 [0,0,0]) */
+  outlineColor?: [number, number, number];
+  /** fresnel 指数 (默认 3, 越大边缘越锐) */
+  outlinePower?: number;
+  /** 描边强度 (默认 1) */
+  outlineStrength?: number;
+  /** 自发光颜色, 0..1 归一化 RGB (默认不启用) */
+  emissive?: [number, number, number];
+  /** 自发光强度 (默认 1) */
+  emissiveIntensity?: number;
+}
+
+/**
+ * 把描边 / 自发光 TSL 节点挂到材质上 (仅作用于 NodeMaterial; 经典材质降级返回 false)。
+ * 与 @voxel-tool/mesh 的 applyVoxelTsl 同签名。
+ */
+export declare function applyVoxelTsl(material: any, opts?: TslOptions): boolean;
 /** 由旋转矩阵 R 与平移构造 z-up 本地空间的 world Matrix4 (共享自 @voxel-tool/mesh) */
 export declare function composeWorldMatrix(R: number[], translation?: [number, number, number]): THREE.Matrix4;
 
@@ -128,6 +170,16 @@ export declare function toUint8Array(data: string | ArrayBuffer | Uint8Array | D
 export declare function toBlob(data: string | ArrayBuffer | Uint8Array | DataView | Blob, mime?: string): Blob;
 /** 浏览器端下载 */
 export declare function downloadModel(data: string | ArrayBuffer | Uint8Array | DataView | Blob, filename: string, mime?: string): void;
+
+/**
+ * 把一个 glTF/GLB 的二进制做 Draco 几何压缩, 返回压缩后的 GLB ArrayBuffer (P4.4)。
+ * 输入可以是 GLB (binary) / glTF (JSON 字符串或对象); 输出始终含 KHR_draco_mesh_compression 的 GLB。
+ * 仅在显式调用时动态加载 draco3d + @gltf-transform/*, 默认导出路径零额外成本。
+ * @param input 原始 glTF/GLB 数据
+ * @param options 压缩参数 (方法/量化位数/速度)
+ * @returns 压缩后的 GLB ArrayBuffer
+ */
+export declare function compressGlbDraco(input: ArrayBuffer | Uint8Array | string | object, options?: DracoCompressOptions): Promise<ArrayBuffer>;
 
 /**
  * 体素导出器: 把 VOX / 体素数据导出为通用 3D 格式。

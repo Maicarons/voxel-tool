@@ -8,3 +8,4 @@ export {
   makeMaterial,
   composeWorldMatrix,
 } from './geometry.js';
+export { applyVoxelTsl } from './tsl.js';

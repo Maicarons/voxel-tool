@@ -26,8 +26,19 @@ export interface ViewerInstanceOptions {
   width?: number;
   height?: number;
   onInfo?: ((info: [number, number] | null) => void) | null;
-  /** 渲染后端: 'webgl'(默认) | 'webgpu'(不可用时自动回退 webgl) */
+  /** 渲染后端: 默认 'webgpu' (不可用时自动回退 WebGL2) | 'webgl'(强制经典路径) */
   renderer?: 'webgl' | 'webgpu';
+  /** 实际启用后端确定/回退时回调 (供 UI 显示当前后端) */
+  onBackend?: ((backend: 'webgl' | 'webgpu') => void) | null;
+  /** TSL 描边/自发光增强 (仅 WebGPU 生效): { outline?, outlineColor?, outlinePower?, outlineStrength?, emissive?, emissiveIntensity? } */
+  tsl?: {
+    outline?: boolean;
+    outlineColor?: [number, number, number];
+    outlinePower?: number;
+    outlineStrength?: number;
+    emissive?: [number, number, number];
+    emissiveIntensity?: number;
+  } | null;
   /** 动画帧率 fps, 默认 12 */
   frameRate?: number;
   /** 动画是否循环, 默认 true */
@@ -110,7 +121,7 @@ export function buildVoxelBucketsGreedy(
 export function makeMaterial(
   materialId: number,
   materials: Record<number, Material> | undefined,
-  opts?: { defaultMaterial?: 'lambert' | 'standard'; side?: THREE.Side },
+  opts?: { defaultMaterial?: 'lambert' | 'standard'; side?: THREE.Side; nodeMaterialClass?: any; tsl?: any },
 ): THREE.Material;
 
 /** 由旋转矩阵 R 与平移构造 z-up 本地空间的 world Matrix4 (共享自 @voxel-tool/mesh) */

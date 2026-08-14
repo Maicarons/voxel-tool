@@ -9,13 +9,15 @@
 //   1) 单模型 (向后兼容): 传 `model`(已解析) 或 `src`(.vox 二进制), 渲染在原点.
 //   2) 多实例场景:        传 `instances`(数组, 每个含 voxels + 世界变换 translation/rotation),
 //      配合 `parseVox` 返回的 `scene` 使用, 正确还原 MagicaVoxel 的多模型/变换布局.
-//   `materials`(来自 parseVox 的 MATL) 会让对应体素用 MeshStandardMaterial 渲染金属/粗糙/透明/自发光.
+//   `materials`(来自 parseVox 的 MATL) 会让对应体素用 MeshStandardMaterial 渲染金属/粗糙/透明/自发光;
+//   无 MATL 的纯顶点色体素默认也用 MeshStandardMaterial (与 exporter 的 PBR 表现一致).
 //
 // 动画 (P3): instances 可带 `frames`(逐帧世界变换 [{translation, rotation}]); 查看器提供
 //   play()/pause()/stop()/setFrame()/setLoop()/setFrameRate()/isPlaying()/getFrameCount() 播放控制.
 //
-// 渲染后端: 默认 WebGL (`renderer:'webgl'`); 指定 `renderer:'webgpu'` 会尝试 WebGPURenderer
-//   (动态 import three/webgpu), 不可用时自动回退 WebGL, 不影响默认路径.
+// 渲染后端: 默认 WebGPU (`renderer:'webgpu'`), 不可用时自动回退 WebGL2 (生产化, P4.7)。
+//   指定 `renderer:'webgl'` 可强制经典 WebGL 路径。WebGPU 通过动态 import three/webgpu 加载,
+//   任何失败 (不支持 / 初始化异常) 都会无缝回退 WebGL2, 不影响可用性。
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { parseVox, ROTATION_MATRICES } from '@voxel-tool/core';
@@ -37,7 +39,9 @@ const DEFAULT_BG = '#16181e';
  * @param {number} [options.width]
  * @param {number} [options.height]
  * @param {(info: [number, number]|null) => void} [options.onInfo]
- * @param {'webgl'|'webgpu'} [options.renderer] 渲染后端, 默认 webgl
+ * @param {'webgl'|'webgpu'} [options.renderer] 渲染后端, 默认 webgpu (自动回退 WebGL2)
+ * @param {(backend: 'webgl'|'webgpu') => void} [options.onBackend] 实际启用后端确定/回退时回调
+ * @param {object} [options.tsl] TSL 描边/自发光增强 (仅 WebGPU 生效, 传 { outline?, outlineColor?, outlinePower?, outlineStrength?, emissive?, emissiveIntensity? })
  * @param {number} [options.frameRate] 动画帧率(fps), 默认 12
  * @param {boolean} [options.loop] 动画是否循环, 默认 true
  * @param {(frame: number) => void} [options.onFrame] 每帧切换回调
@@ -48,7 +52,7 @@ export function createVoxelViewer(container, options = {}) {
   }
   const opts = {
     background: DEFAULT_BG, width: 480, height: 480, onInfo: null,
-    renderer: 'webgl', frameRate: 12, loop: true, onFrame: null, ...options,
+    renderer: 'webgpu', frameRate: 12, loop: true, onFrame: null, onBackend: null, tsl: null, ...options,
   };
 
   const w = container.clientWidth || opts.width;
@@ -64,10 +68,16 @@ export function createVoxelViewer(container, options = {}) {
 
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
 
-  // 渲染器: 默认 WebGL 同步创建; 若请求 webgpu 则异步创建并热替换 (失败回退 WebGL).
+  // 渲染器: 默认尝试 WebGPU (生产化, P4.7), 不可用时自动回退 WebGL2。
+  // 先同步创建 WebGL 占位渲染器, 保证布局/尺寸就绪且 animate 循环可立即渲染;
+  // 随后异步尝试 WebGPURenderer, 成功则热替换并 (若请求 TSL) 重建材质 (需 NodeMaterial),
+  // 失败则保留 WebGL。currentBackend / nodeMatClass 记录实际后端能力, 供材质构造时选择。
   let renderer;
   let rendererReady = true;
   let controls;
+  let currentBackend = 'webgl';
+  let nodeMatClass = null;
+  let lastRebuildInput = null;
 
   function makeControls() {
     controls = new OrbitControls(camera, renderer.domElement);
@@ -83,12 +93,20 @@ export function createVoxelViewer(container, options = {}) {
     makeControls();
   }
 
+  // WebGPU 热替换完成 / WebGL 兜底确定后, 若请求了 TSL 且后端能力变化, 重建材质。
+  function afterBackendResolved() {
+    if (opts.tsl && lastRebuildInput) rebuild(lastRebuildInput);
+  }
+
+  setupWebGL(); // 占位 (WebGL), 立即可用
+
   if (opts.renderer === 'webgpu') {
-    // 先放一个 WebGL 占位以便布局/尺寸就绪, 随后异步尝试 WebGPU 热替换.
-    setupWebGL();
     rendererReady = false;
     import('three/webgpu')
-      .then(({ WebGPURenderer }) => {
+      .then(({ WebGPURenderer, MeshStandardNodeMaterial }) => {
+        if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
+          throw new Error('WebGPU 不可用 (navigator.gpu 缺失)');
+        }
         const r = new WebGPURenderer({ antialias: true });
         return r.init().then(() => {
           r.setPixelRatio(renderer.getPixelRatio());
@@ -101,16 +119,24 @@ export function createVoxelViewer(container, options = {}) {
           controls.dispose();
           renderer.dispose();
           renderer = r;
-          makeControls();
+          nodeMatClass = MeshStandardNodeMaterial;
+          currentBackend = 'webgpu';
+          opts.onBackend?.('webgpu');
           rendererReady = true;
+          afterBackendResolved();
         });
       })
       .catch((e) => {
-        console.warn('[voxel-tool] WebGPU 不可用, 回退 WebGL:', e);
+        console.warn('[voxel-tool] WebGPU 不可用, 回退 WebGL2:', e);
+        currentBackend = 'webgl';
+        nodeMatClass = null;
+        opts.onBackend?.('webgl');
         rendererReady = true;
+        afterBackendResolved();
       });
   } else {
-    setupWebGL();
+    currentBackend = 'webgl';
+    opts.onBackend?.('webgl');
   }
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x404050, 1.05));
@@ -158,7 +184,16 @@ export function createVoxelViewer(container, options = {}) {
       : [{ geometry: buildVoxelGeometryGreedy(voxels, palette), materialId: 0 }];
 
     for (const g of groups) {
-      const mat = makeMaterial(g.materialId, materials);
+      // 默认用 Standard 材质, 与 exporter 的 PBR 表现一致 (金属/玻璃/自发光在查看器与导出产物里表现一致).
+      // 无 MATL 的纯顶点色体素也走 Standard (Lambert 不吃 metalness/emissive, 会导致看/导出不一致).
+      // TSL 增强仅在 WebGPU + NodeMaterial 路径生效; WebGL 回退时 applyVoxelTsl 自动降级 (仅自发光经典属性)。
+      const matOpts = {
+        defaultMaterial: 'standard',
+        side: THREE.DoubleSide,
+        tsl: opts.tsl || undefined,
+        nodeMaterialClass: (currentBackend === 'webgpu' && nodeMatClass) ? nodeMatClass : undefined,
+      };
+      const mat = makeMaterial(g.materialId, materials, matOpts);
       const mesh = new THREE.Mesh(g.geometry, mat);
       mesh.matrixAutoUpdate = false;
       mesh.matrix.copy(m4);
@@ -202,6 +237,7 @@ export function createVoxelViewer(container, options = {}) {
 
   function rebuild(input) {
     disposeMeshes();
+    lastRebuildInput = input;
     const palette = input.palette;
     const materials = input.materials;
 

@@ -4,7 +4,8 @@
   "description": "Command-line voxel exporter — convert MagicaVoxel .vox files to GLTF/GLB/OBJ/STL/PLY/USDZ/FBX headlessly in Node (no browser required)",
   "type": "module",
   "bin": {
-    "voxel-export": "bin/voxel-export.mjs"
+    "voxel-export": "bin/voxel-export.mjs",
+    "voxel-csg": "bin/voxel-csg.mjs"
   },
   "files": [
     "bin",

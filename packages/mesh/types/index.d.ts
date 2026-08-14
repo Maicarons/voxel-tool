@@ -11,12 +11,35 @@ export interface BuildOptions {
   colorSpace?: ColorSpace;
 }
 
+/** TSL 描边 / 自发光增强选项 (见 applyVoxelTsl) */
+export interface TslOptions {
+  /** 是否启用 fresnel 边缘描边 (边缘辉光, 近似描边) */
+  outline?: boolean;
+  /** 描边颜色, 0..1 归一化 RGB (默认黑边 [0,0,0]) */
+  outlineColor?: [number, number, number];
+  /** fresnel 指数 (默认 3, 越大边缘越锐) */
+  outlinePower?: number;
+  /** 描边强度 (默认 1) */
+  outlineStrength?: number;
+  /** 自发光颜色, 0..1 归一化 RGB (默认不启用) */
+  emissive?: [number, number, number];
+  /** 自发光强度 (默认 1) */
+  emissiveIntensity?: number;
+}
+
 /** makeMaterial 的选项 */
 export interface MaterialOptions {
   /** 默认材质 (materialId=0 或缺失时): 'lambert'(默认, viewer) | 'standard'(exporter) */
   defaultMaterial?: 'lambert' | 'standard';
   /** 渲染面: 默认 THREE.DoubleSide (viewer); exporter 传 THREE.FrontSide */
   side?: THREE.Side;
+  /**
+   * 传入则创建该 NodeMaterial 子类 (WebGPU / TSL 路径用, 例如 MeshStandardNodeMaterial)。
+   * 不传则创建经典 MeshStandardMaterial / MeshLambertMaterial (WebGL 回退路径)。exporter/CLI 永不传此参数。
+   */
+  nodeMaterialClass?: any;
+  /** TSL 描边/自发光增强; 仅对 NodeMaterial 生效, 经典材质降级 */
+  tsl?: TslOptions;
 }
 
 /** 构造合并的 BufferGeometry (仅暴露面 + 顶点色), 处于 voxel 本地空间 (z-up) */
@@ -36,3 +59,9 @@ export function makeMaterial(materialId: number, materials?: Record<number, Mate
 
 /** 由旋转矩阵 R (9 元素行主序) 与平移构造 z-up 本地空间的 world Matrix4 */
 export function composeWorldMatrix(R: number[], translation?: [number, number, number]): THREE.Matrix4;
+
+/**
+ * 把描边 / 自发光 TSL 节点挂到材质上 (仅作用于 NodeMaterial; 经典材质降级返回 false)。
+ * 详见 TslOptions。
+ */
+export function applyVoxelTsl(material: any, opts?: TslOptions): boolean;

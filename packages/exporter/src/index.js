@@ -36,8 +36,25 @@ export {
   MIME_TYPES,
 };
 
+/**
+ * glTF/GLB 的 Draco 几何压缩后处理 (P4.4)。
+ *
+ * 用动态包装而非静态 re-export: 这样库的静态依赖图里不含 draco.js / draco3d,
+ * 浏览器端 (如 editor) 构建不会把 draco3d(WASM) 打进 bundle, 也不会触发
+ * node:fs 的浏览器 external 警告; 仅在真正调用时才按需加载 draco3d。
+ * 详见 src/draco.js 的实现说明。
+ *
+ * @param {ArrayBuffer|Uint8Array|string|object} input
+ * @param {object} [options]
+ * @returns {Promise<ArrayBuffer>}
+ */
+export async function compressGlbDraco(input, options = {}) {
+  const m = await import('./draco.js');
+  return m.compressGlbDraco(input, options);
+}
+
 // 低层几何构建 (与 viewer 同算法, 带 sRGB->linear 修正)
-export { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial, composeWorldMatrix } from '@voxel-tool/mesh';
+export { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial, composeWorldMatrix, applyVoxelTsl } from '@voxel-tool/mesh';
 
 /**
  * 体素导出器: 把 VOX / 体素数据导出为通用 3D 格式。
@@ -61,7 +78,9 @@ export class VoxelExporter {
   /**
    * 导出为指定格式。
    * @param {string} format 'glb'|'gltf'|'obj'|'stl'|'ply'|'usdz'|'fbx'|'vox'
-   * @param {object} [options] 透传各 exporter + { binary?, filename? }
+   * @param {object} [options] 透传各 exporter + { binary?, filename?, draco? }
+   *   - draco: 仅对 glb/gltf 生效, 为真时对导出的 glTF 做 KHR_draco_mesh_compression 后处理
+   *     (大幅缩减体积, 保留 PBR 材质 + 烘焙动画)。需消费端安装 draco3d + @gltf-transform/*。
    * @returns {Promise<string|ArrayBuffer|Uint8Array|DataView>}
    */
   export(format, options = {}) {
@@ -69,7 +88,13 @@ export class VoxelExporter {
     const object = this.build();
     // 动画烘焙结果挂在 root.animations, 仅 glTF/GLB 会消费, 其它格式忽略多余参数
     const animations = object.animations || [];
-    return exportModel(object, format, { ...options, animations });
+    return exportModel(object, format, { ...options, animations }).then((data) => {
+      // Draco 后处理: 仅 glb/gltf + 显式开启。未开启时零额外成本 (动态 import 隔离)。
+      if ((format === 'glb' || format === 'gltf') && options && options.draco) {
+        return compressGlbDraco(data, options.dracoOptions || {});
+      }
+      return data;
+    });
   }
 
   /**

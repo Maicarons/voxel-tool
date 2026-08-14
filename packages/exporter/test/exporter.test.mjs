@@ -2,7 +2,7 @@
 import { describe, test, expect } from 'vitest';
 import { VoxelGrid, toVoxBytes, toVoxBytesScene, parseVox, rainbowPalette, defaultPalette } from '../../core/src/index.js';
 import { VoxelExporter, buildExportObject, exportModel, toUint8Array } from '../src/index.js';
-import { buildVoxelGeometry, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy } from '../src/index.js';
+import { buildVoxelGeometry, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from '../src/index.js';
 import * as THREE from 'three';
 
 const pal = rainbowPalette();
@@ -429,5 +429,96 @@ describe('buildVoxelGeometryGreedy 一致性 (P3.2)', () => {
       return ks.sort();
     };
     expect(posKeys(g)).toEqual(posKeys(gn));
+  });
+});
+
+// ===========================================================================
+// P4.1 PBR 材质贯通: MATL -> viewer/exporter 的 MeshStandardMaterial
+// 守护「metal/rough/alpha/emissive 真正进入渲染与导出产物」, 防止保真回退。
+// ===========================================================================
+describe('PBR 材质贯通 (P4.1)', () => {
+  test('makeMaterial: 带材质体素返回 Standard 并套 PBR; 默认桶为 Standard', () => {
+    const materials = { 1: { type: '_metal', metalness: 0.9, roughness: 0.1 }, 3: { type: '_glass', alpha: 0.4 } };
+    const mat = makeMaterial(1, materials, { defaultMaterial: 'standard', side: THREE.FrontSide });
+    expect(mat.isMeshStandardMaterial).toBe(true);
+    expect(mat.metalness).toBeCloseTo(0.9);
+    expect(mat.roughness).toBeCloseTo(0.1);
+    const glass = makeMaterial(3, materials, { defaultMaterial: 'standard', side: THREE.FrontSide });
+    expect(glass.transparent).toBe(true);
+    expect(glass.opacity).toBeCloseTo(0.4);
+    // 无材质默认桶也走 Standard (不再用 Lambert, 与 viewer 行为对齐)
+    const def = makeMaterial(0, materials, { defaultMaterial: 'standard', side: THREE.FrontSide });
+    expect(def.isMeshStandardMaterial).toBe(true);
+    expect(def.metalness).toBe(0);
+    expect(def.roughness).toBe(1);
+  });
+
+  test('带 MATL 的 GLB 实际写进 pbrMetallicRoughness + emissiveFactor + alpha', async () => {
+    const grid = new VoxelGrid(4, 4, 4);
+    grid.set(0, 0, 0, 1); // metal
+    grid.set(2, 0, 0, 3); // glass (半透明)
+    grid.set(0, 2, 0, 5); // emissive
+    const bytes = toVoxBytes(grid, pal);
+    const vox = parseVox(bytes);
+    vox.materials = {
+      1: { type: '_metal', metalness: 0.85, roughness: 0.15 },
+      3: { type: '_glass', alpha: 0.4 },
+      5: { type: '_emit', emissive: 0.9 },
+    };
+    const exporter = new VoxelExporter(vox);
+    const glb = await exporter.export('glb');
+    expect(glb).toBeInstanceOf(ArrayBuffer);
+
+    // GLB 二进制 -> 解 JSON chunk 校验 PBR 节点 (glTF: 12 字节 header + 8 字节 chunk header + JSON)
+    const buf = new Uint8Array(glb);
+    const dv = new DataView(glb);
+    expect(new TextDecoder().decode(buf.subarray(0, 4))).toBe('glTF');
+    const jsonLen = dv.getUint32(12, true);
+    const jsonStr = new TextDecoder().decode(buf.subarray(20, 20 + jsonLen));
+    const gltf = JSON.parse(jsonStr);
+
+    // 材质数: 三个体素都带 MATL (i=1/3/5), 无体素进默认桶 0 -> 1+3+5 = 3 个材质
+    expect(gltf.materials.length).toBe(3);
+    const byId = Object.fromEntries(gltf.materials.map((m, i) => [i, m]));
+    // 找到 metal: 0.85 / rough 0.15
+    const metal = gltf.materials.find((m) => m.pbrMetallicRoughness && m.pbrMetallicRoughness.metallicFactor === 0.85 && m.pbrMetallicRoughness.roughnessFactor === 0.15);
+    expect(metal).toBeTruthy();
+    // glass: 透明 -> alphaMode BLEND + baseColorFactor 第 4 分量 0.4
+    const glass = gltf.materials.find((m) => m.alphaMode === 'BLEND' && m.pbrMetallicRoughness && m.pbrMetallicRoughness.baseColorFactor && m.pbrMetallicRoughness.baseColorFactor[3] === 0.4);
+    expect(glass).toBeTruthy();
+    // emissive: emissiveFactor 近似 0.9 (three 把 emissiveIntensity 直接乘到 emissiveFactor)
+    const emit = gltf.materials.find((m) => m.emissiveFactor && m.emissiveFactor.some((c) => c > 0.5));
+    expect(emit).toBeTruthy();
+  });
+});
+
+describe('Draco 几何压缩 (P4.4)', () => {
+  test('export glb + draco 输出体积小于未压缩且含 KHR_draco_mesh_compression', async () => {
+    const vox = parseVox(toVoxBytes(makeSampleGrid(), pal));
+    const exporter = new VoxelExporter(vox);
+
+    const plain = toUint8Array(await exporter.export('glb'));
+    const draco = toUint8Array(await exporter.export('glb', { draco: true }));
+
+    // 1) 压缩后体积更小 (体素网格 Draco 通常显著缩小)
+    expect(draco.length).toBeLessThan(plain.length);
+
+    // 2) 含 Draco 扩展声明
+    const dv = new DataView(draco.buffer);
+    const jsonLen = dv.getUint32(12, true);
+    const jsonStr = new TextDecoder().decode(new Uint8Array(draco.buffer, 20, jsonLen));
+    const gltf = JSON.parse(jsonStr);
+    expect(gltf.extensionsUsed).toContain('KHR_draco_mesh_compression');
+  });
+
+  test('compressGlbDraco 直接处理未压缩 glb 字节', async () => {
+    const { compressGlbDraco } = await import('../src/draco.js');
+    const vox = parseVox(toVoxBytes(makeSampleGrid(), pal));
+    const plain = toUint8Array(await new VoxelExporter(vox).export('glb'));
+    const out = await compressGlbDraco(plain, { method: 'edgebreaker' });
+    expect(out).toBeInstanceOf(ArrayBuffer);
+    // 魔数校验
+    const u8 = new Uint8Array(out);
+    expect(new TextDecoder().decode(u8.subarray(0, 4))).toBe('glTF');
   });
 });

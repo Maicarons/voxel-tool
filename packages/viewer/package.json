@@ -24,7 +24,7 @@
   "dependencies": {
     "@voxel-tool/core": "^0.3.0",
     "@voxel-tool/mesh": "^0.1.0",
-    "three": "^0.184.0"
+    "three": "^0.185.0"
   },
   "devDependencies": {
     "vite": "^7.0.0"

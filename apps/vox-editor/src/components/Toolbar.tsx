@@ -24,7 +24,15 @@ interface Props {
   onClear: () => void;
   showGrid: boolean;
   onToggleGrid: () => void;
+  symmetry: { x: boolean; y: boolean; z: boolean };
+  onToggleSymmetry: (axis: 'x' | 'y' | 'z') => void;
   fileName: string;
+  csgOp: 'union' | 'intersection' | 'difference';
+  setCsgOp: (op: 'union' | 'intersection' | 'difference') => void;
+  onApplyCsg: () => void;
+  backend: 'webgpu' | 'webgl';
+  tslOn: boolean;
+  onToggleTsl: () => void;
 }
 
 export default function Toolbar({
@@ -40,7 +48,15 @@ export default function Toolbar({
   onClear,
   showGrid,
   onToggleGrid,
+  symmetry,
+  onToggleSymmetry,
   fileName,
+  csgOp,
+  setCsgOp,
+  onApplyCsg,
+  backend,
+  tslOn,
+  onToggleTsl,
 }: Props) {
   const [exportFmt, setExportFmt] = useState<VoxelFormat>('glb');
 
@@ -104,13 +120,59 @@ export default function Toolbar({
         <button className={'btn' + (showGrid ? ' active' : '')} onClick={onToggleGrid}>
           网格
         </button>
+        <div className="seg" title="对称笔刷：开启后绘制会沿选中轴镜像生成体素">
+          <button
+            className={'seg-btn' + (symmetry.x ? ' active' : '')}
+            onClick={() => onToggleSymmetry('x')}
+          >
+            X
+          </button>
+          <button
+            className={'seg-btn' + (symmetry.y ? ' active' : '')}
+            onClick={() => onToggleSymmetry('y')}
+          >
+            Y
+          </button>
+          <button
+            className={'seg-btn' + (symmetry.z ? ' active' : '')}
+            onClick={() => onToggleSymmetry('z')}
+          >
+            Z
+          </button>
+        </div>
+        <div className="seg csg" title="布尔 CSG：选运算后点“应用”载入第二个 .vox 与当前激活图层做并/交/差">
+          <select
+            className="csg-select"
+            value={csgOp}
+            onChange={(e) => setCsgOp(e.target.value as 'union' | 'intersection' | 'difference')}
+          >
+            <option value="union">并</option>
+            <option value="intersection">交</option>
+            <option value="difference">差</option>
+          </select>
+          <button className="seg-btn" onClick={onApplyCsg} title="载入第二个 .vox 执行布尔运算">
+            CSG 应用
+          </button>
+        </div>
+        <button
+          className={'btn' + (tslOn ? ' active' : '')}
+          onClick={onToggleTsl}
+          disabled={backend !== 'webgpu'}
+          title={
+            backend === 'webgpu'
+              ? '切换 TSL 描边 / 自发光增强 (WebGPU NodeMaterial)'
+              : 'TSL 需要 WebGPU 后端 (当前已回退 WebGL2, 不可用)'
+          }
+        >
+          TSL 增强
+        </button>
       </div>
 
       <div className="tool-group tool-right">
         <span className="filename" title={fileName}>
           {fileName}
         </span>
-        <span className="hint">左键绘制 · 拖拽旋转 · 滚轮缩放 · Shift/Alt+点击取色</span>
+        <span className="hint">左键绘制 · 拖拽旋转 · 滚轮缩放 · Shift/Alt+点击取色 · X/Y/Z 对称笔刷</span>
       </div>
     </div>
   );

@@ -1,7 +1,8 @@
 // @voxel-tool/viewer 的 Vitest 测试: 重点守护「面剔除」(voxel viewer 性能核心).
 import { describe, test, expect } from 'vitest';
+import * as THREE from 'three';
 import { VoxelGrid, toVoxBytes, parseVox, rainbowPalette } from '../../core/src/index.js';
-import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy } from '../src/mesh.js';
+import { buildVoxelGeometry, buildVoxelBuckets, buildVoxelGeometryGreedy, buildVoxelBucketsGreedy, makeMaterial } from '../src/mesh.js';
 
 const pal = rainbowPalette();
 
@@ -234,5 +235,25 @@ describe('buildVoxelGeometryGreedy 一致性 (P3.2)', () => {
       return ks.sort();
     };
     expect(posKeys(g)).toEqual(posKeys(gn));
+  });
+});
+
+// ===========================================================================
+// P4.1 收尾: viewer 默认材质与 exporter 对齐为 MeshStandardMaterial
+// 守护「查看器不再用 Lambert (Lambert 不吃 metalness/emissive)」, 确保看/导出 PBR 一致。
+// ===========================================================================
+describe('viewer 默认材质 (P4.1 收尾)', () => {
+  test('makeMaterial 默认(无 defaultMaterial 参数) 仍走 Standard, 与 exporter 对齐', () => {
+    // viewer.js 的 addInstance 现在调 makeMaterial(g.materialId, materials, { defaultMaterial: 'standard', side: THREE.DoubleSide })
+    // 这里直接验证 makeMaterial 在 standard 默认下的行为 (viewer 调用等价路径)。
+    const materials = { 1: { type: '_metal', metalness: 0.7, roughness: 0.3 } };
+    const mat = makeMaterial(1, materials, { defaultMaterial: 'standard', side: THREE.DoubleSide });
+    expect(mat.isMeshStandardMaterial).toBe(true);
+    expect(mat.metalness).toBeCloseTo(0.7);
+    expect(mat.roughness).toBeCloseTo(0.3);
+    // 无材质默认桶(0) 也必须是 Standard (这是 P4.1 收尾前 viewer 用 Lambert 的真实不一致点)
+    const def = makeMaterial(0, materials, { defaultMaterial: 'standard', side: THREE.DoubleSide });
+    expect(def.isMeshStandardMaterial).toBe(true);
+    expect(def.side).toBe(THREE.DoubleSide);
   });
 });

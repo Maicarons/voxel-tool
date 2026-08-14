@@ -7,6 +7,7 @@
 //   - makeMaterial 接受 opts.defaultMaterial: 'lambert'(默认) | 'standard', opts.side
 // 几何体处于 voxel 本地空间 (z-up)；整体 z-up -> three y-up 由消费方统一施加。
 import * as THREE from 'three';
+import { applyVoxelTsl } from './tsl.js';
 
 // 立方体 6 个面: 法线 + 4 个局部角 (立方体半边长 0.5, 中心在体素原点)
 const FACES = [
@@ -141,23 +142,31 @@ export function buildVoxelBuckets(voxels, palette, materials, opts = {}) {
  * 否则用 Standard 材质套用 metalness/roughness/alpha/emissive.
  * @param {number} materialId
  * @param {object} [materials]
- * @param {{ defaultMaterial?: 'lambert'|'standard', side?: THREE.Side }} [opts]
+ * @param {object} [opts]
  *   defaultMaterial: 'lambert'(默认, viewer) | 'standard'(exporter, 对 GLTF/USDZ/FBX 保真度更优)
  *   side: 默认 THREE.DoubleSide (viewer); exporter 传 THREE.FrontSide (USDZ 不支持双面)
+ *   nodeMaterialClass: 传入则创建该 NodeMaterial 子类 (WebGPU / TSL 路径用, 例如 MeshStandardNodeMaterial);
+ *     不传则创建经典 MeshStandardMaterial / MeshLambertMaterial (WebGL 回退路径). exporter/CLI 永不传此参数,
+ *     故 Node 产物不会误拉 three/webgpu。
+ *   tsl: 传入则应用 TSL 描边/自发光增强 (见 applyVoxelTsl); 仅对 NodeMaterial 生效, 经典材质降级。
  */
 export function makeMaterial(materialId, materials, opts = {}) {
   const defaultMaterial = opts.defaultMaterial || 'lambert';
   const side = opts.side !== undefined ? opts.side : THREE.DoubleSide;
+  const NodeClass = opts.nodeMaterialClass || null;
+
+  const createStd = (extra) => NodeClass
+    ? new NodeClass({ vertexColors: true, side, ...extra })
+    : new THREE.MeshStandardMaterial({ vertexColors: true, side, ...extra });
+
   if (!materialId || !materials || !materials[materialId]) {
-    if (defaultMaterial === 'standard') {
-      return new THREE.MeshStandardMaterial({ vertexColors: true, side, metalness: 0, roughness: 1 });
-    }
-    return new THREE.MeshLambertMaterial({ vertexColors: true, side });
+    const mat = createStd({ metalness: 0, roughness: 1 });
+    if (opts.tsl) applyVoxelTsl(mat, opts.tsl);
+    else if (defaultMaterial === 'lambert') return new THREE.MeshLambertMaterial({ vertexColors: true, side });
+    return mat;
   }
   const m = materials[materialId];
-  const mat = new THREE.MeshStandardMaterial({
-    vertexColors: true,
-    side,
+  const mat = createStd({
     metalness: m.metalness || 0,
     roughness: m.roughness !== undefined ? m.roughness : 1,
   });
@@ -170,6 +179,7 @@ export function makeMaterial(materialId, materials, opts = {}) {
     mat.emissiveIntensity = m.emissive;
   }
   if (m.ior) mat.ior = m.ior;
+  if (opts.tsl) applyVoxelTsl(mat, opts.tsl);
   return mat;
 }
 
