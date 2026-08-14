@@ -10,7 +10,8 @@ A JavaScript toolkit for **MagicaVoxel `.vox` files**: a dependency-free core li
 - 📦 **`@voxel-tool/core`** — Dependency-free core (`.vox` read/write, palettes, voxel grid `VoxelGrid`), runs in Node and the browser with zero runtime dependencies. Also parses and writes MagicaVoxel **frame animation** (FRAM + nTRN keyframes) losslessly.
 - 🔷 **`@voxel-tool/mesh`** — Shared voxel-geometry core (Three.js): the single implementation of face-culling + greedy-meshing `buildVoxelGeometry`, reused by both `@voxel-tool/viewer` and `@voxel-tool/exporter`. Color-space (`raw` vs sRGB→linear) and material differences are parameterized, so the algorithm lives in exactly one place.
 - 🧩 **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses the same rendering implementation. Supports **animation playback** (`play`/`pause`/`setFrame`/…) and an optional **WebGPU** backend (auto-fallback to WebGL).
-- 📤 **`@voxel-tool/exporter`** — Standalone export library: voxel models → GLB / glTF / OBJ / STL / PLY / USDZ / FBX, plus lossless `.vox` round-trip and glTF/GLB **animation baking**.
+- 📤 **`@voxel-tool/exporter`** — Standalone export library: voxel models → GLB / glTF / OBJ / STL / PLY / USDZ / FBX, plus lossless `.vox` round-trip, glTF/GLB **animation baking**, and **Draco** compression.
+- 🖥️ **`@voxel-tool/cli`** — Headless Node CLI: convert `.vox` ↔ GLB / glTF / OBJ / STL / PLY / USDZ / FBX, **voxelize meshes** (`.glb`/`.stl` → `.vox`), run **boolean CSG** (union/intersection/difference), and round-trip **Minecraft Schematic** — no browser required.
 - ⚛️ **`@voxel-tool/react`** — React 3D viewer component.
 - 🟢 **`@voxel-tool/vue`** — Vue 3 3D viewer component.
 - 🔵 **`@voxel-tool/solid`** — SolidJS 3D viewer component.
@@ -34,6 +35,8 @@ voxel-tool/
 │   ├── core/        @voxel-tool/core    dependency-free core (read/write / palettes / grid)
 │   ├── mesh/        @voxel-tool/mesh    shared voxel geometry core (face culling + greedy meshing, Three.js)
 │   ├── viewer/      @voxel-tool/viewer  framework-agnostic viewer core (Three.js)
+│   ├── exporter/    @voxel-tool/exporter standalone export library (8 formats + .vox round-trip + Draco)
+│   ├── cli/         @voxel-tool/cli     headless Node CLI (convert / voxelize / boolean CSG / Schematic)
 │   ├── react/       @voxel-tool/react   React 3D viewer component
 │   ├── vue/         @voxel-tool/vue     Vue 3 3D viewer component
 │   ├── solid/       @voxel-tool/solid   SolidJS 3D viewer component
@@ -168,7 +171,7 @@ A full, runnable **`.vox` voxel editor** built with React + Three.js on top of `
 npm run dev:editor     # -> http://localhost:5180
 ```
 
-Features: click-to-paint / click-to-erase on a live 3D view (raycasting against cube faces), a 256-color palette, orbit/pan/zoom, undo, load & save `.vox`, and export to PNG. See **[apps/vox-editor](apps/vox-editor)**.
+Features: click-to-paint / click-to-erase on a live 3D view (raycasting against cube faces), a 256-color palette, orbit/pan/zoom, undo, load & save `.vox`, export to PNG **or 3D formats**, **non-destructive layers**, **boolean CSG** (union / intersection / difference), a **symmetry brush**, **TSL outline/emissive** enhancement, and a **WebGPU** backend with automatic WebGL2 fallback. See **[apps/vox-editor](apps/vox-editor)**.
 
 ## Documentation
 

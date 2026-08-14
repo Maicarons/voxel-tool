@@ -23,7 +23,9 @@ import {
 | `options.background` | `string` | `'#16181e'` | 画布背景色 |
 | `options.width` | `number` | `480` | 初始宽度（px） |
 | `options.height` | `number` | `480` | 初始高度（px） |
-| `options.renderer` | `'webgl' \| 'webgpu'` | `'webgl'` | 渲染后端。`webgpu` 按需加载 Three 的 `WebGPURenderer`，**若浏览器不支持则自动回退 WebGL**；默认 `webgl` 路径完全不变 |
+| `options.renderer` | `'webgl' \| 'webgpu'` | `'webgpu'` | 渲染后端。默认 WebGPU，若浏览器/设备不支持则**自动回退 WebGL2**；传 `'webgl'` 可强制经典路径。WebGPU 代码按需拆分，仅在请求时下载。 |
+| `options.onBackend` | `(backend: 'webgl' \| 'webgpu') => void` | `null` | 实际启用的后端确定（WebGPU 成功或回退之后）时回调一次，常用于显示角标。 |
+| `options.tsl` | `object \| null` | `null` | TSL 描边/自发光增强——`{ outline?, outlineColor?, outlinePower?, outlineStrength?, emissive?, emissiveIntensity? }`。仅在 WebGPU 后端生效，WebGL 下忽略。 |
 | `options.frameRate` | `number` | `12` | 动画播放帧率（fps），当 `instances` 带 `frames` 时生效 |
 | `options.loop` | `boolean` | `true` | 动画是否循环 |
 | `options.onInfo` | `(info: [number, number] \| null) => void` | `null` | 重建后回调，参数为 `[体素数, 面数]` |
@@ -115,15 +117,20 @@ viewer.play();            // 开始
 
 每个动画实例通过逐帧切换本地矩阵来移动（用的是预计算的 `frames` 变换），因此播放开销很小——不重建几何。
 
-### 渲染后端（WebGPU）
+### 渲染后端（WebGPU + TSL）
 
-默认使用 WebGL 渲染器。传 `renderer: 'webgpu'` 可改用 Three 的 `WebGPURenderer`：
+查看器**默认使用 WebGPU**，按需加载 Three 的 `WebGPURenderer`（`import('three/webgpu')`）。若浏览器/设备不支持 WebGPU，则**自动回退 WebGL2**——无论哪条路径都完整可用，且 WebGPU 代码被拆成独立 chunk，只有显式请求时才下载。
 
 ```js
-const viewer = createVoxelViewer(el, { model, palette, renderer: 'webgpu' });
+const viewer = createVoxelViewer(el, {
+  model, palette,
+  renderer: 'webgpu',            // 默认；传 'webgl' 强制经典路径
+  onBackend: (b) => console.log('当前后端:', b),
+  tsl: { outline: true, outlineColor: [0, 0, 0], outlinePower: 3, emissive: [0.1, 0.3, 1], emissiveIntensity: 0.6 },
+});
 ```
 
-WebGPU 后端按需加载（`import('three/webgpu')`），**若浏览器/设备不支持则自动回退 WebGL**。默认 `webgl` 路径完全不变，且 WebGPU 代码被拆成独立 chunk，只有显式请求时才下载。
+`tsl` 选项用 Three Shading Language 节点（GPU 端实时）增加 **Fresnel 边缘描边**与/或**自发光辉光**，仅在 WebGPU 后端生效；WebGL 下腹化降级为普通 `MeshStandardMaterial` 的 emissive。
 
 ## `buildVoxelGeometry(voxels, palette)`
 

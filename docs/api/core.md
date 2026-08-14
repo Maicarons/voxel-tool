@@ -6,6 +6,8 @@ A pure-JS core library: `.vox` read/write, palette helpers, and the `VoxelGrid` 
 import {
   VoxelGrid, toVoxBytes, toVoxBytesScene, downloadVox, parseVox,
   defaultPalette, hsvToRgb, rainbowPalette, ROTATION_MATRICES, MAGIC, VERSION,
+  voxelCSG, CSG_OP, mirrorCoordinates, voxelizeMesh,
+  parseSchematic, voxelToSchematic, blockColor,
 } from '@voxel-tool/core';
 ```
 
@@ -97,6 +99,83 @@ Triggers a `.vox` file download in the browser (calls `toVoxBytes` then download
 - `MAGIC`: `'VOX '` (4 bytes)
 - `VERSION`: `150`
 - `ROTATION_MATRICES`: `number[][][]` (24 entries) — the signed-permutation rotation set used by MagicaVoxel's `_r` index. `ROTATION_MATRICES[r]` is a 3×3 matrix; the `rotation` field of a scene instance indexes into it.
+
+## Advanced geometry & interop
+
+### `voxelCSG(A, B, op, options?)`
+
+Boolean CSG over two `VoxelGrid`s. Because voxels live on a discrete integer lattice, boolean operations are exact set operations over coordinate keys — no mesh CSG (BSP / edge-collapse) needed.
+
+```js
+import { VoxelGrid, voxelCSG, CSG_OP } from '@voxel-tool/core';
+
+const unionGrid = voxelCSG(a, b, 'union');
+const isectGrid = voxelCSG(a, b, 'intersection');
+const diffGrid  = voxelCSG(a, b, 'difference'); // a minus b
+```
+
+| Param | Type | Description |
+|---|---|---|
+| `A` | `VoxelGrid` | Primary operand (the minuend for `difference`) |
+| `B` | `VoxelGrid` | Secondary operand |
+| `op` | `'union' \| 'intersection' \| 'difference'` | Operation (or `CSG_OP.UNION` etc.) |
+| `options.colorTie` | `'a' \| 'b'` | Color at conflicting coordinates (default `'a'`) |
+
+The result grid's size is the per-axis maximum of `A` and `B`, so `union` can hold all of `B`. `gridFromMap(map, size)` converts a `{ "x,y,z": colorIndex }` map (e.g. a single editor layer) back into a `VoxelGrid`.
+
+### `mirrorCoordinates(x, y, z, size, symmetry?)`
+
+Pure geometry helper for the **symmetry brush**: given a voxel and the bounding-box `size`, returns every mirrored coordinate across the enabled axes (`{ x?, y?, z? }`). The mirror plane is each axis' geometric center `coord' = (size[a] - 1) - coord[a]`; enabling multiple axes yields all `2^k` flips (de-duplicated). Boundary clipping is left to the caller.
+
+```js
+import { mirrorCoordinates } from '@voxel-tool/core';
+
+mirrorCoordinates(2, 3, 4, [10, 10, 10], { x: true }); // -> [[2,3,4], [7,3,4]]
+```
+
+### `voxelizeMesh(triangles, options?)`
+
+Voxelize a triangle mesh into a `VoxelGrid`.
+
+```js
+import { voxelizeMesh, toVoxBytes } from '@voxel-tool/core';
+
+const { grid, palette } = voxelizeMesh(triangles, { resolution: 64 });
+const bytes = toVoxBytes(grid, palette); // -> .vox
+```
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `triangles` | `Array<{ a,b,c: [x,y,z], color?: [r,g,b,a] }>` | — | Triangles; `color` is 0..255 per channel (falls back to `options.color`) |
+| `options.resolution` | `number \| [nx,ny,nz]` | `64` | Max-dimension voxel resolution (scalar) or explicit `[nx,ny,nz]` |
+| `options.mode` | `'shell' \| 'solid'` | `'shell'` | `shell` = surface shell (no closed mesh required); `solid` = fill interior (needs a closed manifold) |
+| `options.pad` | `number` | `0` | Voxels to expand the bounding box by |
+| `options.color` | `[r,g,b,a]` | `[200,205,215,255]` | Uniform color when a triangle has none |
+| `options.bounds` | `[[min],[max]]` | auto | Explicit bounding box |
+
+`shell` uses SAT (13 axes) per triangle/AABB; `solid` casts a `+X` ray per voxel center and counts parity (requires a closed manifold).
+
+### Minecraft Schematic interop
+
+`parseSchematic` / `voxelToSchematic` read and write [Sponge v2](https://spongepowered.org/) `.schem` files (GZip-compressed NBT, zero runtime dependencies — uses the Web-standard `CompressionStream`/`DecompressionStream`, so it works in Node 18+ and the browser). Block placement follows the Sponge spec (`index = x + z*W + y*W*L`), and colors are approximated to the nearest Minecraft block by Euclidean distance (Minecraft has no color semantics).
+
+```js
+import { parseSchematic, voxelToSchematic } from '@voxel-tool/core';
+
+// .schem -> voxel data compatible with parseVox (feed straight into the viewer / exporter)
+const { models, palette } = await parseSchematic(schemBytes);
+
+// voxel data -> .schem (round-trip with any .vox model)
+const schemBytes = await voxelToSchematic({ models, palette }, { name: 'my-build' });
+```
+
+| Function | Returns | Description |
+|---|---|---|
+| `parseSchematic(input)` | `Promise<{ version, models, palette, scene, frameCount, materials }>` | Parses a `.schem` into the same shape as `parseVox` — drop-in for the viewer/exporter |
+| `voxelToSchematic(vox, opts?)` | `Promise<Uint8Array>` | Encodes voxel data as a Sponge v2 `.schem` (`opts.name`, `opts.author`, `opts.description`) |
+| `blockColor(blockName)` | `[r,g,b,a] \| null` | Returns the representative color of a Minecraft block state (used for the nearest-block heuristic) |
+
+> Legacy MCEdit `.schematic` (numeric ids + YZX raw bytes) is not supported; Sponge v2 is the modern standard.
 
 ## Example
 

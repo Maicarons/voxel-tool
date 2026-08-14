@@ -22,6 +22,11 @@ A full-featured **MagicaVoxel `.vox` editor** running entirely in your browser �
 | **Export 3D models** | Export the current model to **GLB / glTF / OBJ / STL / PLY / USDZ / FBX** (powered by `@voxel-tool/exporter`) |
 | **New Model** | Start fresh with an empty 24×24×24 canvas |
 | **Demo** | Loads a colorful sphere demo on first open |
+| **Layers** | Non-destructive layer panel — add / delete / reorder / rename layers, toggle visibility, set per-layer opacity; painting affects only the active layer |
+| **Boolean CSG** | Combine two models with union / intersection / difference (load a second `.vox` and apply) |
+| **Symmetry brush** | Mirror painting across X / Y / Z axes — model symmetric structures in one stroke |
+| **TSL enhancement** | Optional Fresnel rim outline + emissive glow (Three Shading Language, WebGPU only) |
+| **WebGPU backend** | Renders with WebGPU by default and falls back to WebGL2 automatically; a badge shows the active backend |
 
 ## Controls
 
@@ -45,10 +50,44 @@ Use the **Export Model** control in the toolbar: pick a format from the dropdown
 
 > OBJ and STL carry geometry only (a limitation of the underlying Three.js exporters) — use GLB / glTF / PLY / USDZ / FBX when you need vertex colors.
 
+## Advanced editing
+
+### Layers (non-destructive)
+
+The editor stores your model as a stack of layers. Painting and erasing only affect the **active** layer, and layer visibility / opacity affect **rendering only** — your voxel data is never destroyed when you hide or fade a layer. The **Layers** panel (right side) lets you:
+
+- **Add / delete / reorder / rename** layers (at least one layer is always kept).
+- **Toggle visibility** of any layer.
+- **Set per-layer opacity** (0–1); values below 1 render the layer semi-transparent.
+- Pick the **active** layer to paint into.
+
+Export and save always composite all visible layers into a single model, so non-destructive editing never loses data.
+
+### Boolean CSG
+
+Combine the active layer with a second model using constructive solid geometry:
+
+1. Pick an operation in the toolbar — **union** (A ∪ B), **intersection** (A ∩ B), or **difference** (A − B).
+2. Click **CSG Apply** and choose a second `.vox` (or `.schem`) file.
+
+The operation runs on voxel coordinate keys (a set operation over the grid), so it is exact and fast — no mesh CSG required. The conflict color defaults to the primary (A) operand; see `voxelCSG` in the [core API](/api/core) for the underlying function.
+
+### Symmetry brush
+
+Enable **X / Y / Z** mirror toggles in the toolbar to paint symmetric structures in a single stroke. Each placed voxel is mirrored across the enabled axes about the model's center, so you model one half and the editor fills the rest.
+
+### TSL outline / emissive
+
+The **TSL** toggle (toolbar) adds a Fresnel rim outline and/or an emissive glow using Three Shading Language. This enhances the WebGPU render path with real-time shading nodes; the toggle is disabled automatically when running on the WebGL2 fallback (classic materials degrade gracefully).
+
+### WebGPU backend
+
+The editor renders with **WebGPU** by default and **automatically falls back to WebGL2** when the browser/device lacks WebGPU support. A small badge in the top-right corner shows the active backend (`WebGPU` / `WebGL2`) so you always know which path is live.
+
 ## Tech Stack
 
-- **React 18** + **Three.js** for rendering
-- **@voxel-tool/core** for `.vox` file I/O and voxel data structures
+- **React** + **Three.js** for rendering (WebGPU by default, WebGL2 fallback)
+- **@voxel-tool/core** for `.vox` file I/O, voxel data structures, boolean CSG, symmetry and mesh voxelization
 - **Vite** for build, deployed as a static SPA at `/voxel-tool/editor/`
 
 ## Running Locally

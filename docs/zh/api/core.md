@@ -6,6 +6,8 @@
 import {
   VoxelGrid, toVoxBytes, toVoxBytesScene, downloadVox, parseVox,
   defaultPalette, hsvToRgb, rainbowPalette, ROTATION_MATRICES, MAGIC, VERSION,
+  voxelCSG, CSG_OP, mirrorCoordinates, voxelizeMesh,
+  parseSchematic, voxelToSchematic, blockColor,
 } from '@voxel-tool/core';
 ```
 
@@ -97,6 +99,83 @@ const { version, models, palette, scene, frameCount, materials } = parseVox(inpu
 - `MAGIC`：`'VOX '`（4 字节）
 - `VERSION`：`150`
 - `ROTATION_MATRICES`：`number[][][]`（24 个）—— MagicaVoxel `_r` 索引所用的带符号置换旋转集。`ROTATION_MATRICES[r]` 是 3×3 矩阵；场景实例的 `rotation` 字段即其下标。
+
+## 进阶几何与互操作
+
+### `voxelCSG(A, B, op, options?)`
+
+对两个 `VoxelGrid` 执行布尔 CSG。因为体素位于离散整数栅格上，布尔运算就是坐标键上的精确集合运算——无需真正的网格 CSG（BSP / 边折叠）。
+
+```js
+import { VoxelGrid, voxelCSG, CSG_OP } from '@voxel-tool/core';
+
+const unionGrid = voxelCSG(a, b, 'union');
+const isectGrid = voxelCSG(a, b, 'intersection');
+const diffGrid  = voxelCSG(a, b, 'difference'); // a 减 b
+```
+
+| 参数 | 类型 | 说明 |
+|---|---|---|
+| `A` | `VoxelGrid` | 主操作数（差集的被减对象） |
+| `B` | `VoxelGrid` | 次操作数 |
+| `op` | `'union' \| 'intersection' \| 'difference'` | 运算（或 `CSG_OP.UNION` 等） |
+| `options.colorTie` | `'a' \| 'b'` | 冲突坐标的颜色归属（默认 `'a'`） |
+
+结果网格尺寸取 `A`、`B` 各轴最大值，因此 `union` 能容纳全部 `B`。`gridFromMap(map, size)` 把 `{ "x,y,z": colorIndex }` 映射（例如单层编辑器图层）转回 `VoxelGrid`。
+
+### `mirrorCoordinates(x, y, z, size, symmetry?)`
+
+**对称笔刷**的纯几何工具：给定体素与包围盒 `size`，返回沿启用轴的所有镜像坐标（`{ x?, y?, z? }`）。镜像平面取各轴几何中心 `coord' = (size[a] - 1) - coord[a]`；同时开启多轴时得到全部 `2^k` 个翻转（已去重）。边界裁剪交由调用方处理。
+
+```js
+import { mirrorCoordinates } from '@voxel-tool/core';
+
+mirrorCoordinates(2, 3, 4, [10, 10, 10], { x: true }); // -> [[2,3,4], [7,3,4]]
+```
+
+### `voxelizeMesh(triangles, options?)`
+
+把三角网格体素化为 `VoxelGrid`。
+
+```js
+import { voxelizeMesh, toVoxBytes } from '@voxel-tool/core';
+
+const { grid, palette } = voxelizeMesh(triangles, { resolution: 64 });
+const bytes = toVoxBytes(grid, palette); // -> .vox
+```
+
+| 参数 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `triangles` | `Array<{ a,b,c: [x,y,z], color?: [r,g,b,a] }>` | — | 三角形；`color` 每通道 0..255（缺省用 `options.color`） |
+| `options.resolution` | `number \| [nx,ny,nz]` | `64` | 最大维度体素分辨率（标量）或显式 `[nx,ny,nz]` |
+| `options.mode` | `'shell' \| 'solid'` | `'shell'` | `shell`=仅表面壳（不需封闭网格）；`solid`=填充内部（需封闭流形） |
+| `options.pad` | `number` | `0` | 包围盒外扩体素数 |
+| `options.color` | `[r,g,b,a]` | `[200,205,215,255]` | 三角形无 color 时的统一色 |
+| `options.bounds` | `[[min],[max]]` | 自动 | 显式包围盒 |
+
+`shell` 对每个三角形/AABB 用 SAT（13 轴）判定；`solid` 对每个体素中心沿 `+X` 发射线并按奇偶性判定内部（需封闭流形）。
+
+### Minecraft Schematic 互操作
+
+`parseSchematic` / `voxelToSchematic` 读写 [Sponge v2](https://spongepowered.org/) `.schem` 文件（GZip 压缩的 NBT，零运行时依赖——使用 Web 标准 `CompressionStream`/`DecompressionStream`，因此 Node 18+ 与浏览器通用）。方块排布遵循 Sponge 规范（`index = x + z*W + y*W*L`），颜色经「最近方块」欧氏距离启发式近似（Minecraft 无颜色语义）。
+
+```js
+import { parseSchematic, voxelToSchematic } from '@voxel-tool/core';
+
+// .schem -> 与 parseVox 兼容的体素数据（可直接喂给查看器 / 导出器）
+const { models, palette } = await parseSchematic(schemBytes);
+
+// 体素数据 -> .schem（与任意 .vox 模型往返）
+const schemBytes = await voxelToSchematic({ models, palette }, { name: 'my-build' });
+```
+
+| 函数 | 返回 | 说明 |
+|---|---|---|
+| `parseSchematic(input)` | `Promise<{ version, models, palette, scene, frameCount, materials }>` | 把 `.schem` 解析成与 `parseVox` 同形状——查看器/导出器即插即用 |
+| `voxelToSchematic(vox, opts?)` | `Promise<Uint8Array>` | 把体素数据编码为 Sponge v2 `.schem`（`opts.name`、`opts.author`、`opts.description`） |
+| `blockColor(blockName)` | `[r,g,b,a] \| null` | 返回某 Minecraft 方块态的代表色（用于最近方块启发式） |
+
+> 旧式 MCEdit `.schematic`（数字 id + YZX 原始字节）不支持；Sponge v2 是现代标准。
 
 ## 示例
 

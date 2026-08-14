@@ -236,4 +236,34 @@ import { parseVox } from '@voxel-tool/core';
 
 const parsed = parseVox(bytes);
 const voxBytes = await new VoxelExporter(parsed).export('vox'); // 重新编码回原始文件
+
+## 4. 无头命令行（CLI）
+
+更喜欢命令行？`@voxel-tool/cli` 包能在没有浏览器的情况下完成上述一切——`.vox` ↔ GLB/glTF/OBJ/STL/PLY/USDZ/FBX 双向转换、网格体素化、导出 Minecraft Schematic，以及布尔 CSG。
+
+```bash
+# .vox -> GLB（默认），或其它任意格式
+npx @voxel-tool/cli voxel-export model.vox -f glb -o model.glb
+
+# 网格 -> .vox（体素化）
+npx @voxel-tool/cli voxel-export model.glb -r 96 -o model.vox
+
+# 对两个体素文件执行布尔 CSG
+npx @voxel-tool/cli voxel-csg union a.vox b.vox -o merged.vox
+```
+
+完整参数见 [CLI 指南](/zh/guide/cli)。
+
+## 5. Minecraft Schematic
+
+`@voxel-tool/core` 能读写 Sponge v2 `.schem` 文件，因此体素模型可与 Minecraft 模组生态互通：
+
+```js
+import { parseSchematic, voxelToSchematic } from '@voxel-tool/core';
+
+const { models, palette } = await parseSchematic(schemBytes);   // .schem -> 可供查看器/导出器使用
+const bytes = await voxelToSchematic({ models, palette });       // 模型 -> .schem
+```
+
+`parseSchematic` 返回与 `parseVox` 相同的结构，因此可以直接把 `.schem` 喂给 `@voxel-tool/viewer` 或 `@voxel-tool/exporter`。详见 [core API](/zh/api/core)。
 ```

@@ -20,7 +20,9 @@ hero:
     - title: Animation & .vox round-trip
       details: 'Core parses MagicaVoxel frame animation (FRAM + nTRN keyframes) and writes it back losslessly; the exporter bakes the motion into glTF/GLB animation clips, and can re-encode any model straight back to .vox.'
     - title: Greedy meshing + WebGPU
-      details: 'Greedy meshing merges coplanar same-color faces, collapsing solid models by 1000×+ in triangle count. An optional WebGPU backend (with automatic WebGL fallback) is available on demand.'
+      details: 'Greedy meshing merges coplanar same-color faces, collapsing solid models by 1000×+ in triangle count. The default backend is WebGPU (with automatic WebGL2 fallback); the WebGPU code is code-split and only loaded when requested.'
+    - title: Editor, CSG & interop
+      details: 'A browser voxel editor with non-destructive layers, boolean CSG (union/intersection/difference), a symmetry brush, and TSL rim/emissive effects. A headless CLI converts .vox ↔ GLB/glTF/OBJ/STL/PLY/USDZ/FBX, voxelizes meshes, and runs CSG — plus Minecraft Schematic round-trip.'
     - title: Six framework components
       details: Drop-in <code>VoxViewer</code> components for React / Vue / Solid / Preact / Svelte / Qwik — drag to rotate, scroll to zoom, right-drag to pan.
 
@@ -38,6 +40,7 @@ hero:
 - **`@voxel-tool/mesh`** — Shared voxel-geometry core (Three.js): the single face-culling + greedy-meshing `buildVoxelGeometry` implementation, reused by both `@voxel-tool/viewer` and `@voxel-tool/exporter`; color-space and material differences are parameterized.
 - **`@voxel-tool/viewer`** — Framework-agnostic Three.js viewer core (`createVoxelViewer` + `buildVoxelGeometry`); every framework component reuses it.
 - **`@voxel-tool/exporter`** — Standalone export library: voxel models → GLB / glTF / OBJ / STL / PLY / USDZ / FBX, plus lossless `.vox` round-trip and glTF/GLB animation baking.
+- **`@voxel-tool/cli`** — Headless Node CLI: convert `.vox` ↔ GLB/glTF/OBJ/STL/PLY/USDZ/FBX, voxelize meshes, run boolean CSG, and round-trip Minecraft Schematic — no browser required.
 - **`@voxel-tool/react`** — React 3D viewer component (Three.js).
 - **`@voxel-tool/vue`** — Vue 3 3D viewer component (same rendering approach).
 - **`@voxel-tool/solid`** — SolidJS 3D viewer component.

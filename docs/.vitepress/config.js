@@ -24,6 +24,7 @@ export default defineConfig({
             items: [
               { text: 'Installation', link: '/guide/installation' },
               { text: 'Usage', link: '/guide/usage' },
+              { text: 'CLI', link: '/guide/cli' },
               { text: 'Publishing to npm', link: '/guide/publishing' },
             ],
           },
@@ -81,6 +82,7 @@ export default defineConfig({
             items: [
               { text: '安装', link: '/zh/guide/installation' },
               { text: '使用', link: '/zh/guide/usage' },
+              { text: '命令行工具', link: '/zh/guide/cli' },
             ],
           },
           {

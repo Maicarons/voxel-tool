@@ -236,4 +236,34 @@ import { parseVox } from '@voxel-tool/core';
 
 const parsed = parseVox(bytes);
 const voxBytes = await new VoxelExporter(parsed).export('vox'); // re-encodes the original
+
+## 4. Headless CLI
+
+Prefer the command line? The `@voxel-tool/cli` package does everything above without a browser — convert `.vox` ↔ GLB/glTF/OBJ/STL/PLY/USDZ/FBX, voxelize meshes, export Minecraft Schematic, and run boolean CSG.
+
+```bash
+# .vox -> GLB (default), or any other format
+npx @voxel-tool/cli voxel-export model.vox -f glb -o model.glb
+
+# mesh -> .vox (voxelize)
+npx @voxel-tool/cli voxel-export model.glb -r 96 -o model.vox
+
+# boolean CSG on two voxel files
+npx @voxel-tool/cli voxel-csg union a.vox b.vox -o merged.vox
+```
+
+See the [CLI guide](/guide/cli) for the full flag reference.
+
+## 5. Minecraft Schematic
+
+`@voxel-tool/core` reads and writes Sponge v2 `.schem` files, so voxel models interoperate with the Minecraft modding ecosystem:
+
+```js
+import { parseSchematic, voxelToSchematic } from '@voxel-tool/core';
+
+const { models, palette } = await parseSchematic(schemBytes);   // .schem -> viewer/exporter-ready
+const bytes = await voxelToSchematic({ models, palette });       // model -> .schem
+```
+
+`parseSchematic` returns the same shape as `parseVox`, so you can feed a `.schem` straight into `@voxel-tool/viewer` or `@voxel-tool/exporter`. See the [core API](/api/core) for details.
 ```

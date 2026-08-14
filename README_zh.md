@@ -10,7 +10,8 @@
 - 📦 **`@voxel-tool/core`** — 纯 JS 核心库：`.vox` 读写、调色板、体素网格（`VoxelGrid`），Node 与浏览器通用，零运行时依赖。还能**无损解析与写回** MagicaVoxel 帧动画（FRAM + nTRN 关键帧）。
 - 🔷 **`@voxel-tool/mesh`** — 共享体素几何核心 (Three.js)：面剔除 + greedy meshing 的 `buildVoxelGeometry` 单一实现，被 `@voxel-tool/viewer` 与 `@voxel-tool/exporter` 共用；颜色空间（`raw` / sRGB→linear）与材质差异通过参数表达，算法只存在一处。
 - 🧩 **`@voxel-tool/viewer`** — 框架无关的 Three.js 查看器核心（`createVoxelViewer` + `buildVoxelGeometry`），所有框架组件都复用同一套渲染实现。支持**动画播放**（`play`/`pause`/`setFrame`/…）与可选 **WebGPU** 后端（自动回退 WebGL）。
-- 📤 **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX，并支持 `.vox` 无损往返与 glTF/GLB **动画烘焙**。
+- 📤 **`@voxel-tool/exporter`** — 独立导出库：体素模型 → GLB / glTF / OBJ / STL / PLY / USDZ / FBX，并支持 `.vox` 无损往返、glTF/GLB **动画烘焙**与 **Draco** 压缩。
+- 🖥️ **`@voxel-tool/cli`** — 无头 Node CLI：`.vox` ↔ GLB / glTF / OBJ / STL / PLY / USDZ / FBX 双向转换、**网格体素化**（`.glb`/`.stl` → `.vox`）、**布尔 CSG**（并/交/差），以及 **Minecraft Schematic** 往返——无需浏览器。
 - ⚛️ **`@voxel-tool/react`** — React 3D 查看器组件。
 - 🟢 **`@voxel-tool/vue`** — Vue 3 3D 查看器组件。
 - 🔵 **`@voxel-tool/solid`** — SolidJS 3D 查看器组件。
@@ -34,6 +35,8 @@ voxel-tool/
 │   ├── core/        @voxel-tool/core    纯 JS 核心库 (读写/调色板/网格)
 │   ├── mesh/        @voxel-tool/mesh    共享体素几何核心 (面剔除+greedy meshing, Three.js)
 │   ├── viewer/      @voxel-tool/viewer  框架无关查看器核心 (Three.js)
+│   ├── exporter/    @voxel-tool/exporter 独立导出库 (8 种格式 + .vox 往返 + Draco)
+│   ├── cli/         @voxel-tool/cli     无头 Node CLI (转换 / 体素化 / 布尔 CSG / Schematic)
 │   ├── react/       @voxel-tool/react   React 3D 查看器组件
 │   ├── vue/         @voxel-tool/vue     Vue 3 3D 查看器组件
 │   ├── solid/       @voxel-tool/solid   SolidJS 3D 查看器组件
@@ -168,7 +171,7 @@ export const App = component$(() => {
 npm run dev:editor     # -> http://localhost:5180
 ```
 
-功能：在实时 3D 视图上点击绘制 / 点击擦除（射线拾取立方体面）、256 色调色板、旋转/平移/缩放、撤销、载入与保存 `.vox`、导出 PNG。详见 **[apps/vox-editor](apps/vox-editor)**。
+功能：在实时 3D 视图上点击绘制 / 点击擦除（射线拾取立方体面）、256 色调色板、旋转/平移/缩放、撤销、载入与保存 `.vox`、导出 PNG **或 3D 格式**、**非破坏式图层**、**布尔 CSG**（并/交/差）、**对称笔刷**、**TSL 描边/自发光**增强，以及 **WebGPU** 后端（自动回退 WebGL2）。详见 **[apps/vox-editor](apps/vox-editor)**。
 
 ## 文档
 

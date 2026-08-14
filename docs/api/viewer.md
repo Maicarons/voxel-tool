@@ -23,7 +23,9 @@ Mounts a real-3D voxel viewer inside a container element and returns a controlle
 | `options.background` | `string` | `'#16181e'` | Canvas background color |
 | `options.width` | `number` | `480` | Initial width (px) |
 | `options.height` | `number` | `480` | Initial height (px) |
-| `options.renderer` | `'webgl' \| 'webgpu'` | `'webgl'` | Rendering backend. `webgpu` loads Three's `WebGPURenderer` on demand and **falls back to WebGL automatically** if the browser lacks WebGPU support; default `webgl` path is unchanged. |
+| `options.renderer` | `'webgl' \| 'webgpu'` | `'webgpu'` | Rendering backend. Defaults to WebGPU and **falls back to WebGL2 automatically** if the browser/device lacks WebGPU support. Pass `'webgl'` to force the classic path. The WebGPU code is code-split and only downloaded when requested. |
+| `options.onBackend` | `(backend: 'webgl' \| 'webgpu') => void` | `null` | Called once the actually-used backend is resolved (after the WebGPU attempt succeeds or falls back). Useful for showing a badge. |
+| `options.tsl` | `object \| null` | `null` | TSL outline/emissive enhancement — `{ outline?, outlineColor?, outlinePower?, outlineStrength?, emissive?, emissiveIntensity? }`. Only takes effect on the WebGPU backend; ignored on WebGL. |
 | `options.frameRate` | `number` | `12` | Animation playback rate in fps (used when `instances` carry `frames`). |
 | `options.loop` | `boolean` | `true` | Whether animation playback loops. |
 | `options.onInfo` | `(info: [number, number] \| null) => void` | `null` | Called after rebuild; argument is `[voxelCount, faceCount]` |
@@ -115,15 +117,20 @@ viewer.play();            // start
 
 Each animated instance is moved by swapping its local matrix per frame (using its precomputed `frames` transforms), so playback is cheap — no geometry is rebuilt.
 
-### Rendering backend (WebGPU)
+### Rendering backend (WebGPU + TSL)
 
-By default the viewer uses a WebGL renderer. Pass `renderer: 'webgpu'` to opt into Three's `WebGPURenderer`:
+The viewer uses **WebGPU by default** and loads Three's `WebGPURenderer` on demand (`import('three/webgpu')`). If the browser/device lacks WebGPU support it **falls back to WebGL2 automatically** — the default path is fully functional either way, and the WebGPU code is split into its own chunk so it isn't downloaded unless requested.
 
 ```js
-const viewer = createVoxelViewer(el, { model, palette, renderer: 'webgpu' });
+const viewer = createVoxelViewer(el, {
+  model, palette,
+  renderer: 'webgpu',            // default; pass 'webgl' to force the classic path
+  onBackend: (b) => console.log('active backend:', b),
+  tsl: { outline: true, outlineColor: [0, 0, 0], outlinePower: 3, emissive: [0.1, 0.3, 1], emissiveIntensity: 0.6 },
+});
 ```
 
-The WebGPU backend is loaded on demand (`import('three/webgpu')`) and **falls back to WebGL automatically** if the browser/device doesn't support WebGPU. The default `webgl` path is completely unchanged, and the WebGPU code is split into its own chunk so it isn't downloaded unless requested.
+The `tsl` option adds a **Fresnel rim outline** and/or an **emissive glow** using Three Shading Language nodes (real-time, GPU-side). It only applies on the WebGPU backend; on WebGL the material degrades gracefully to a plain `MeshStandardMaterial` emissive.
 
 ## `buildVoxelGeometry(voxels, palette)`
 
