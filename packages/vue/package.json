@@ -32,8 +32,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.8",
-    "vite": "^7.0.0",
-    "vue": "^3.5.13"
+    "vite": "^8.2.2",
+    "vue": "^3.5.42"
   },
   "keywords": [
     "vox",
