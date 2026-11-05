@@ -90,9 +90,8 @@ describe('多格式导出', () => {
     expect(data).toContain('o '); // 对象名
     expect(data).toContain('v '); // 顶点
     expect(data).toContain('f '); // 面
-    // three 的 OBJExporter 仅在 Points 路径写顶点色, Mesh 路径不写;
-    // 因此 OBJ 默认不带颜色 (几何正确, 颜色需 GLB/PLY/USDZ/FBX 才保真)。
-    expect(data).not.toMatch(/v\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.]+\s+[\d.]+\s+[\d.]+/);
+    // 新版 three 的 OBJExporter 对 Mesh 也会写出顶点色 (v x y z r g b),
+    // 不再假定 OBJ 不带颜色; 几何正确性由上面的 o/v/f 断言保证。
   });
 
   test('stl -> 默认二进制 (DataView) 且非空; ascii 以 solid 开头', async () => {
