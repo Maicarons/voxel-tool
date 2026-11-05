@@ -22,10 +22,10 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "three": "^0.185.0"
+    "three": "^0.187.0"
   },
   "devDependencies": {
-    "vite": "^8.1.6"
+    "vite": "^8.3.5"
   },
   "keywords": [
     "vox",
