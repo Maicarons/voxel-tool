@@ -33,7 +33,7 @@
   "devDependencies": {
     "@builder.io/qwik": "^1.20.0",
     "typescript": "^5.6.3",
-    "vite": "^7.3.7"
+    "vite": "^8.1.6"
   },
   "keywords": [
     "vox",
