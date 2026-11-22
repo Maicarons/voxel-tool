@@ -31,9 +31,9 @@
     "@voxel-tool/viewer": "^0.4.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.10",
-    "vite": "^8.3.5",
-    "vue": "^3.5.44"
+    "@vitejs/plugin-vue": "^6.0.11",
+    "vite": "^8.3.8",
+    "vue": "^3.5.45"
   },
   "keywords": [
     "vox",
